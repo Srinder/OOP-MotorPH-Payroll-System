@@ -3,14 +3,18 @@ import javax.swing.table.DefaultTableModel;
 import java.time.LocalDate;
 import javax.swing.JOptionPane;
 import java.util.List;
+import java.util.Map;
+
+
 
 public class Attendance extends JFrame {
-    private String empNo;
+    private String empNo;   
 
     public Attendance(String empNo) {
         this.empNo = empNo;
         initComponents();
         loadEmployeeName(); // ✅ Load employee name
+        employeeIDLabel.setText("Employee ID: " + empNo);
         loadAttendanceRecords(empNo, LocalDate.now().minusMonths(1), LocalDate.now()); // ✅ Load last month's records
         System.out.println("Displaying attendance for employee: " + empNo);
     }
@@ -23,7 +27,7 @@ public class Attendance extends JFrame {
     private void loadEmployeeName() {
         String employeeName = getEmployeeName(empNo);
         jLabel3.setText("Employee Name: " + employeeName); // ✅ Set name in GUI
-    }
+    } 
 
     // ✅ Retrieve Employee Name from Data Source
     private String getEmployeeName(String empNo) {
@@ -34,17 +38,22 @@ public class Attendance extends JFrame {
 
     // ✅ Load Attendance Records into Table
     public void loadAttendanceRecords(String empNo, LocalDate startDate, LocalDate endDate) {
-        DefaultTableModel model = (DefaultTableModel) jTableAttendance.getModel();
-        model.setRowCount(0); // ✅ Clear previous data
+    DefaultTableModel model = (DefaultTableModel) jTableAttendance.getModel();
+    model.setRowCount(0); // ✅ Clear previous data before loading new records
 
-        List<String[]> records = AttendanceFileHandler.getAttendanceRecords(empNo, startDate, endDate);
+    List<String[]> records = AttendanceFileHandler.getAttendanceRecords(empNo, startDate, endDate);
 
-        for (String[] row : records) {
-            model.addRow(new Object[]{row[0], row[1], row[2]});
-        }
-
-        System.out.println("Loaded attendance for Employee | Date Range: " + startDate + " to " + endDate);
+    if (!records.isEmpty()) {
+        employeeIDLabel.setText("Employee ID: " + empNo); // ✅ Dynamically updates Employee ID in GUI
     }
+
+    for (String[] row : records) {
+        model.addRow(new Object[]{row[0], row[1], row[2]});
+    }
+
+    System.out.println("Attendance records loaded successfully for Employee ID: " + empNo);
+}
+
 
 
     /**
@@ -58,6 +67,7 @@ public class Attendance extends JFrame {
 
         jLabel2 = new javax.swing.JLabel();
         buttonGroup1 = new javax.swing.ButtonGroup();
+        jLabel6 = new javax.swing.JLabel();
         jPanel1 = new javax.swing.JPanel();
         jScrollPane1 = new javax.swing.JScrollPane();
         jTableAttendance = new javax.swing.JTable();
@@ -70,8 +80,11 @@ public class Attendance extends JFrame {
         jLabel4 = new javax.swing.JLabel();
         jLabel5 = new javax.swing.JLabel();
         checkAttendanceButton = new javax.swing.JButton();
+        employeeIDLabel = new javax.swing.JLabel();
 
         jLabel2.setText("jLabel2");
+
+        jLabel6.setText("jLabel6");
 
         setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
 
@@ -82,7 +95,7 @@ public class Attendance extends JFrame {
 
             },
             new String [] {
-                "Date", "Time IN", "Time OUT", "Status", "Remarks"
+                "Date", "Time IN", "Time OUT", "Late", "Overtime", "Undertime"
             }
         ));
         jScrollPane1.setViewportView(jTableAttendance);
@@ -109,10 +122,10 @@ public class Attendance extends JFrame {
         jLabel3.setText("Name : Garcia, Manuel III");
 
         jLabel4.setForeground(new java.awt.Color(255, 255, 255));
-        jLabel4.setText("Start Date");
+        jLabel4.setText("From");
 
         jLabel5.setForeground(new java.awt.Color(255, 255, 255));
-        jLabel5.setText("End Date");
+        jLabel5.setText("To");
 
         checkAttendanceButton.setBackground(new java.awt.Color(0, 102, 102));
         checkAttendanceButton.setForeground(new java.awt.Color(255, 255, 255));
@@ -123,59 +136,65 @@ public class Attendance extends JFrame {
             }
         });
 
+        employeeIDLabel.setFont(new java.awt.Font("Segoe UI", 1, 14)); // NOI18N
+        employeeIDLabel.setForeground(new java.awt.Color(255, 255, 255));
+        employeeIDLabel.setText("Employee ID: ");
+
         javax.swing.GroupLayout jPanel1Layout = new javax.swing.GroupLayout(jPanel1);
         jPanel1.setLayout(jPanel1Layout);
         jPanel1Layout.setHorizontalGroup(
             jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(jPanel1Layout.createSequentialGroup()
-                .addGap(49, 49, 49)
-                .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING)
-                    .addComponent(jButton1, javax.swing.GroupLayout.PREFERRED_SIZE, 85, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addComponent(jScrollPane1, javax.swing.GroupLayout.PREFERRED_SIZE, 685, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addGap(32, 32, 32)
+                .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                     .addGroup(jPanel1Layout.createSequentialGroup()
                         .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                            .addComponent(jLabel3, javax.swing.GroupLayout.PREFERRED_SIZE, 324, javax.swing.GroupLayout.PREFERRED_SIZE)
                             .addComponent(jLblEmpAtt, javax.swing.GroupLayout.PREFERRED_SIZE, 304, javax.swing.GroupLayout.PREFERRED_SIZE)
-                            .addComponent(jLabel3, javax.swing.GroupLayout.PREFERRED_SIZE, 324, javax.swing.GroupLayout.PREFERRED_SIZE))
-                        .addGap(18, 18, 18)
+                            .addComponent(employeeIDLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 324, javax.swing.GroupLayout.PREFERRED_SIZE))
+                        .addGap(28, 28, 28)
                         .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                            .addComponent(jLabel1, javax.swing.GroupLayout.PREFERRED_SIZE, 125, javax.swing.GroupLayout.PREFERRED_SIZE)
                             .addGroup(jPanel1Layout.createSequentialGroup()
-                                .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING)
-                                    .addComponent(jLabel4)
-                                    .addComponent(jLabel5))
-                                .addGap(18, 18, 18)
-                                .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING)
-                                    .addComponent(endDateLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 126, javax.swing.GroupLayout.PREFERRED_SIZE)
-                                    .addComponent(startDateLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 126, javax.swing.GroupLayout.PREFERRED_SIZE))
-                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
-                                .addComponent(checkAttendanceButton, javax.swing.GroupLayout.PREFERRED_SIZE, 135, javax.swing.GroupLayout.PREFERRED_SIZE))
-                            .addComponent(jLabel1))))
-                .addContainerGap(59, Short.MAX_VALUE))
+                                .addGap(28, 28, 28)
+                                .addComponent(jLabel4)
+                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                                .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                                    .addComponent(checkAttendanceButton, javax.swing.GroupLayout.PREFERRED_SIZE, 277, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                    .addGroup(jPanel1Layout.createSequentialGroup()
+                                        .addComponent(startDateLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 126, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                                        .addComponent(jLabel5)
+                                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                                        .addComponent(endDateLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 126, javax.swing.GroupLayout.PREFERRED_SIZE))))))
+                    .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING)
+                        .addComponent(jButton1, javax.swing.GroupLayout.PREFERRED_SIZE, 85, javax.swing.GroupLayout.PREFERRED_SIZE)
+                        .addComponent(jScrollPane1, javax.swing.GroupLayout.PREFERRED_SIZE, 685, javax.swing.GroupLayout.PREFERRED_SIZE)))
+                .addGap(70, 91, Short.MAX_VALUE))
         );
         jPanel1Layout.setVerticalGroup(
             jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, jPanel1Layout.createSequentialGroup()
-                .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING)
-                    .addGroup(jPanel1Layout.createSequentialGroup()
-                        .addContainerGap()
-                        .addComponent(jLblEmpAtt, javax.swing.GroupLayout.DEFAULT_SIZE, 89, Short.MAX_VALUE)
-                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
-                        .addComponent(jLabel3)
-                        .addGap(22, 22, 22))
-                    .addGroup(jPanel1Layout.createSequentialGroup()
-                        .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                .addContainerGap(25, Short.MAX_VALUE)
+                .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, jPanel1Layout.createSequentialGroup()
                         .addComponent(jLabel1)
-                        .addGap(18, 18, 18)
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
                         .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING)
-                            .addComponent(checkAttendanceButton)
-                            .addGroup(jPanel1Layout.createSequentialGroup()
-                                .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                                    .addComponent(startDateLabel, javax.swing.GroupLayout.Alignment.TRAILING, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                                    .addComponent(jLabel4, javax.swing.GroupLayout.Alignment.TRAILING))
-                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
-                                .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING)
-                                    .addComponent(endDateLabel, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                                    .addComponent(jLabel5))))
-                        .addGap(9, 9, 9)))
+                            .addComponent(endDateLabel, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                            .addComponent(startDateLabel, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                            .addComponent(jLabel5)))
+                    .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, jPanel1Layout.createSequentialGroup()
+                        .addComponent(jLblEmpAtt, javax.swing.GroupLayout.PREFERRED_SIZE, 55, javax.swing.GroupLayout.PREFERRED_SIZE)
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
+                        .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                            .addComponent(jLabel4)
+                            .addComponent(jLabel3))))
+                .addGap(8, 8, 8)
+                .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                    .addComponent(checkAttendanceButton)
+                    .addComponent(employeeIDLabel))
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addComponent(jScrollPane1, javax.swing.GroupLayout.PREFERRED_SIZE, 362, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addGap(18, 18, 18)
                 .addComponent(jButton1)
@@ -186,7 +205,7 @@ public class Attendance extends JFrame {
         getContentPane().setLayout(layout);
         layout.setHorizontalGroup(
             layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addComponent(jPanel1, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+            .addComponent(jPanel1, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
         );
         layout.setVerticalGroup(
             layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
@@ -202,14 +221,31 @@ public class Attendance extends JFrame {
     }//GEN-LAST:event_jButton1ActionPerformed
 
     private void checkAttendanceButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_checkAttendanceButtonActionPerformed
+                                                   
     if (startDateLabel.getDate() != null && endDateLabel.getDate() != null) {
         LocalDate startDate = startDateLabel.getDate().toInstant().atZone(java.time.ZoneId.systemDefault()).toLocalDate();
         LocalDate endDate = endDateLabel.getDate().toInstant().atZone(java.time.ZoneId.systemDefault()).toLocalDate();
 
         loadAttendanceRecords(empNo, startDate, endDate);
+
+        DefaultTableModel model = (DefaultTableModel) jTableAttendance.getModel();
+        for (int row = 0; row < model.getRowCount(); row++) {
+            String dateStr = (String) model.getValueAt(row, 0); 
+
+            if (dateStr != null && !dateStr.trim().isEmpty()) {
+                Map<String, Double> attendanceMinutes = AttendanceFileHandler.computeDailyAttendanceMinutes(Integer.parseInt(empNo), dateStr);
+                
+                model.setValueAt(attendanceMinutes.get("Late"), row, 3); // ✅ Updates Late column
+                model.setValueAt(attendanceMinutes.get("Overtime"), row, 4); // ✅ Updates Overtime column
+                model.setValueAt(attendanceMinutes.get("Undertime"), row, 5); // ✅ Updates Undertime column
+            }
+        }
+        System.out.println("Late, Overtime, and Undertime minutes now correctly calculated per row.");
     } else {
         JOptionPane.showMessageDialog(this, "Please select both start and end dates.", "Date Range Required", JOptionPane.WARNING_MESSAGE);
     }
+
+
     }//GEN-LAST:event_checkAttendanceButtonActionPerformed
 
     /**
@@ -250,6 +286,7 @@ public class Attendance extends JFrame {
     // Variables declaration - do not modify//GEN-BEGIN:variables
     private javax.swing.ButtonGroup buttonGroup1;
     private javax.swing.JButton checkAttendanceButton;
+    private javax.swing.JLabel employeeIDLabel;
     private com.toedter.calendar.JDateChooser endDateLabel;
     private javax.swing.JButton jButton1;
     private javax.swing.JLabel jLabel1;
@@ -257,6 +294,7 @@ public class Attendance extends JFrame {
     private javax.swing.JLabel jLabel3;
     private javax.swing.JLabel jLabel4;
     private javax.swing.JLabel jLabel5;
+    private javax.swing.JLabel jLabel6;
     private javax.swing.JLabel jLblEmpAtt;
     private javax.swing.JPanel jPanel1;
     private javax.swing.JScrollPane jScrollPane1;

@@ -33,7 +33,6 @@ public class AddEmployee extends javax.swing.JFrame {
                            .mapToInt(Employee::getEmployeeNumber)
                            .max().orElse(10000) + 1;
 
-    System.out.println("Next Employee Number Generated: " + newEmpNum); // Debugging output
     jTxtEmpNum.setText(String.valueOf(newEmpNum));
     jTxtEmpNum.setEditable(false);
 }
