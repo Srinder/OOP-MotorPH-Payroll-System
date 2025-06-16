@@ -43,7 +43,6 @@ public class Payslip extends javax.swing.JFrame {
 
 
     private void loadEmployeePayslip(String empNo) {
-    System.out.println("Loading payslip for Employee ID: " + empNo);
 
     // Retrieve Employee Details from File/Database
     Employee e = EmployeeFileHandler.getEmployee(Integer.parseInt(empNo)).orElse(null);

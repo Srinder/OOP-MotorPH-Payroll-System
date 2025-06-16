@@ -16,7 +16,6 @@ public class Attendance extends JFrame {
         loadEmployeeName(); // ✅ Load employee name
         employeeIDLabel.setText("Employee ID: " + empNo);
         loadAttendanceRecords(empNo, LocalDate.now().minusMonths(1), LocalDate.now()); // ✅ Load last month's records
-        System.out.println("Displaying attendance for employee: " + empNo);
     }
 
     public Attendance() {
@@ -51,7 +50,6 @@ public class Attendance extends JFrame {
         model.addRow(new Object[]{row[0], row[1], row[2]});
     }
 
-    System.out.println("Attendance records loaded successfully for Employee ID: " + empNo);
 }
 
 
@@ -240,7 +238,6 @@ public class Attendance extends JFrame {
                 model.setValueAt(attendanceMinutes.get("Undertime"), row, 5); // ✅ Updates Undertime column
             }
         }
-        System.out.println("Late, Overtime, and Undertime minutes now correctly calculated per row.");
     } else {
         JOptionPane.showMessageDialog(this, "Please select both start and end dates.", "Date Range Required", JOptionPane.WARNING_MESSAGE);
     }

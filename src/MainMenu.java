@@ -256,7 +256,7 @@ public class MainMenu extends javax.swing.JFrame {
     );
 
     if (input != null && !input.trim().isEmpty()) {
-        System.out.println("Employee Number entered: " + input);
+
 
         // 🔽 Directly pass the Employee ID to Payslip
         new Payslip(input).setVisible(true);
@@ -290,7 +290,6 @@ public class MainMenu extends javax.swing.JFrame {
     );
 
     if (input != null && !input.trim().isEmpty()) {
-        System.out.println("Employee Number entered: " + input);
 
         // Launch Attendance window
         Attendance attendanceWindow = new Attendance(input);  // Make sure Attendance has this constructor
