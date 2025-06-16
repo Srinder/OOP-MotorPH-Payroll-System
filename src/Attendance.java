@@ -1,4 +1,8 @@
 import javax.swing.JFrame;
+import javax.swing.table.DefaultTableModel;
+import java.time.LocalDate;
+import javax.swing.JOptionPane;
+import java.util.List;
 
 public class Attendance extends JFrame {
     private String empNo;
@@ -6,13 +10,41 @@ public class Attendance extends JFrame {
     public Attendance(String empNo) {
         this.empNo = empNo;
         initComponents();
+        loadEmployeeName(); // ✅ Load employee name
+        loadAttendanceRecords(empNo, LocalDate.now().minusMonths(1), LocalDate.now()); // ✅ Load last month's records
+        System.out.println("Displaying attendance for employee: " + empNo);
     }
 
     public Attendance() {
         initComponents();
     }
 
+    // ✅ Fetch and Display Employee Name in jLabel3
+    private void loadEmployeeName() {
+        String employeeName = getEmployeeName(empNo);
+        jLabel3.setText("Employee Name: " + employeeName); // ✅ Set name in GUI
+    }
 
+    // ✅ Retrieve Employee Name from Data Source
+    private String getEmployeeName(String empNo) {
+        return EmployeeFileHandler.getEmployee(Integer.parseInt(empNo))
+                .map(e -> e.getFirstName() + " " + e.getLastName())
+                .orElse("Unknown Employee"); // ✅ Handles invalid employee number
+    }
+
+    // ✅ Load Attendance Records into Table
+    public void loadAttendanceRecords(String empNo, LocalDate startDate, LocalDate endDate) {
+        DefaultTableModel model = (DefaultTableModel) jTableAttendance.getModel();
+        model.setRowCount(0); // ✅ Clear previous data
+
+        List<String[]> records = AttendanceFileHandler.getAttendanceRecords(empNo, startDate, endDate);
+
+        for (String[] row : records) {
+            model.addRow(new Object[]{row[0], row[1], row[2]});
+        }
+
+        System.out.println("Loaded attendance for Employee | Date Range: " + startDate + " to " + endDate);
+    }
 
 
     /**
@@ -170,7 +202,14 @@ public class Attendance extends JFrame {
     }//GEN-LAST:event_jButton1ActionPerformed
 
     private void checkAttendanceButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_checkAttendanceButtonActionPerformed
-    
+    if (startDateLabel.getDate() != null && endDateLabel.getDate() != null) {
+        LocalDate startDate = startDateLabel.getDate().toInstant().atZone(java.time.ZoneId.systemDefault()).toLocalDate();
+        LocalDate endDate = endDateLabel.getDate().toInstant().atZone(java.time.ZoneId.systemDefault()).toLocalDate();
+
+        loadAttendanceRecords(empNo, startDate, endDate);
+    } else {
+        JOptionPane.showMessageDialog(this, "Please select both start and end dates.", "Date Range Required", JOptionPane.WARNING_MESSAGE);
+    }
     }//GEN-LAST:event_checkAttendanceButtonActionPerformed
 
     /**
@@ -201,8 +240,10 @@ public class Attendance extends JFrame {
         //</editor-fold>
 
         /* Create and display the form */
-        java.awt.EventQueue.invokeLater(() -> {
-            new Attendance().setVisible(true);
+        java.awt.EventQueue.invokeLater(new Runnable() {
+            public void run() {
+                new Attendance().setVisible(true);
+            }
         });
     }
 
