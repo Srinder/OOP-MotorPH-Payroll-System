@@ -5,34 +5,23 @@ import java.io.FileWriter;
 import java.io.IOException;
 
 
-/**
- * `AddEmployee` class provides a GUI for adding new employee records.
- * Ensures that Employee Numbers auto-increment and prevents manual edits.
- */
+
 public class AddEmployee extends javax.swing.JFrame {
 
-    /**
-     * Constructor - Initializes the AddEmployee form.
-     * Automatically generates the next Employee Number and disables manual editing.
-     */
     public AddEmployee() {
-        initComponents(); // Initialize UI components
-        generateNextEmpNum(); // Auto-set Employee Number
+        initComponents();
+        generateNextEmpNum();
 
-        // Prevent manual entry in Employee Number field
+
         jTxtEmpNum.setEditable(false);
         jTxtEmpNum.setFocusable(false);
         jTxtEmpNum.setBackground(java.awt.Color.LIGHT_GRAY);
     }
 
-    /**
-     * Generates the next available Employee Number automatically.
-     * Uses `EmployeeFileHandler` to retrieve existing employee records.
-     */
     private void generateNextEmpNum() {
-    List<Employee> employees = EmployeeFileHandler.loadEmployees(); // Load latest employee data
+    List<Employee> employees = EmployeeFileHandler.loadEmployees(); 
 
-    // Find the next available Employee Number
+
     int newEmpNum = employees.isEmpty() ? 10001 : employees.stream()
                            .mapToInt(Employee::getEmployeeNumber)
                            .max().orElse(10000) + 1;
@@ -252,7 +241,7 @@ public class AddEmployee extends javax.swing.JFrame {
 
     private void jButtonSubmitActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButtonSubmitActionPerformed
         try {
-        // 📥 Get input data
+
         int empNum = Integer.parseInt(jTxtEmpNum.getText().trim());
         String lastName = jTxtLastName.getText().trim();
         String firstName = jTxtFirstName.getText().trim();
@@ -282,28 +271,24 @@ public class AddEmployee extends javax.swing.JFrame {
         double hourlyRate = 0.0;
         double withholdingTax = 0.0;
 
-        // 🧾 Create employee object
+
         Employee newEmployee = new Employee(empNum, lastName, firstName, phoneNumber, status, position, supervisor,
             address, String.valueOf(sssNumber), String.valueOf(philHealthNumber),
             String.valueOf(tinNumber), String.valueOf(pagIbigNumber),
             basicSalary, riceSubsidy, phoneAllowance, clothingAllowance,
             grossSemiMonthlyRate, hourlyRate, withholdingTax, birthday);
 
-        // 📂 Save employee
         EmployeeFileHandler.saveEmployee(newEmployee);
         JOptionPane.showMessageDialog(this, "Employee added successfully!", "Success", JOptionPane.INFORMATION_MESSAGE);
 
-        // 🧑‍💻 Generate login credentials
         String username = (firstName.charAt(0) + lastName).toLowerCase().replaceAll("\\s+", "");
         String password = "Password123";
 
-        // 🎉 Show login creation message
         JOptionPane.showMessageDialog(this,
             "Login for Employee " + firstName + " " + lastName + " has been created.\n" +
             "Username: " + username + "\nPassword: " + password,
             "Login Created", JOptionPane.INFORMATION_MESSAGE);
 
-        // 🔐 Select access level
         String[] roles = {"EMPLOYEE", "SUPPORT", "HR", "ADMIN"};
         String accessLevel = (String) JOptionPane.showInputDialog(
             this,
@@ -320,7 +305,6 @@ public class AddEmployee extends javax.swing.JFrame {
             return;
         }
 
-        // ❓ Ask for security answer
         String answer = JOptionPane.showInputDialog(
             this,
             "Answer to: What is your favorite food?",
@@ -333,7 +317,6 @@ public class AddEmployee extends javax.swing.JFrame {
             return;
         }
 
-        // 📄 Save login to employee_logins.csv
         try (CSVWriter writer = new CSVWriter(new FileWriter("src/data/employee_logins.csv", true))) {
             String[] loginRow = {
                 String.valueOf(empNum),
@@ -353,7 +336,7 @@ public class AddEmployee extends javax.swing.JFrame {
             return;
         }
 
-        // 🔄 Refresh view
+
         generateNextEmpNum();
         if (EmployeeTable.getInstance() != null) {
             EmployeeTable.getInstance().refreshEmployeeTable();

@@ -71,14 +71,14 @@
                               <Component id="jScrollPane1" min="-2" pref="755" max="-2" attributes="0"/>
                           </Group>
                           <EmptySpace max="-2" attributes="0"/>
-                          <Group type="103" groupAlignment="1" max="-2" attributes="0">
+                          <Group type="103" groupAlignment="0" max="-2" attributes="0">
                               <Component id="jButtonView" max="32767" attributes="0"/>
-                              <Component id="jButtonUpdate" alignment="1" pref="81" max="32767" attributes="0"/>
-                              <Component id="jButtonDelete" max="32767" attributes="0"/>
+                              <Component id="jButtonUpdate" alignment="0" pref="95" max="32767" attributes="0"/>
+                              <Component id="jButtonDelete" alignment="0" max="32767" attributes="0"/>
                           </Group>
                       </Group>
                   </Group>
-                  <EmptySpace min="-2" pref="52" max="-2" attributes="0"/>
+                  <EmptySpace min="-2" pref="38" max="-2" attributes="0"/>
               </Group>
           </Group>
         </DimensionLayout>
@@ -94,7 +94,7 @@
                   <EmptySpace max="32767" attributes="0"/>
               </Group>
               <Group type="102" alignment="1" attributes="0">
-                  <EmptySpace pref="16" max="32767" attributes="0"/>
+                  <EmptySpace pref="11" max="32767" attributes="0"/>
                   <Component id="jLabelEmpInfo" min="-2" max="-2" attributes="0"/>
                   <EmptySpace type="separate" max="-2" attributes="0"/>
                   <Component id="jScrollPane1" min="-2" pref="472" max="-2" attributes="0"/>

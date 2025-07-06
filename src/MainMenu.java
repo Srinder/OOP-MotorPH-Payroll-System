@@ -319,8 +319,15 @@ public class MainMenu extends javax.swing.JFrame {
     }//GEN-LAST:event_jButtonEmployeeActionPerformed
 
     private void jButtonPayslipActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButtonPayslipActionPerformed
-                              
     String role = User.getLoggedInUser().getRole();
+
+    if ("ADMIN".equalsIgnoreCase(role)) {
+        // 👨‍💼 Admin users get full employee list view
+        EmployeeTable employeeTable = new EmployeeTable(null, "Employee Payslip");
+        employeeTable.setVisible(true);
+        employeeTable.setLocationRelativeTo(null);
+        return;
+    }
 
     if ("EMPLOYEE".equalsIgnoreCase(role) || 
         "SUPPORT".equalsIgnoreCase(role) || 
@@ -328,7 +335,6 @@ public class MainMenu extends javax.swing.JFrame {
         
         String empId = User.getLoggedInUser().getEmployeeId();
         new Payslip(empId).setVisible(true);
-        
     } else {
         String input = JOptionPane.showInputDialog(
             this,
@@ -338,7 +344,7 @@ public class MainMenu extends javax.swing.JFrame {
         );
 
         if (input != null && !input.trim().isEmpty()) {
-            new Payslip(input).setVisible(true);
+            new Payslip(input.trim()).setVisible(true);
         } else {
             JOptionPane.showMessageDialog(this, "Employee Number is required.", "Input Error", JOptionPane.WARNING_MESSAGE);
         }
@@ -367,6 +373,7 @@ public class MainMenu extends javax.swing.JFrame {
     }//GEN-LAST:event_jButtonTimeoutActionPerformed
 
     private void jButtonAttendanceActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButtonAttendanceActionPerformed
+                                                
     String role = User.getLoggedInUser().getRole().trim();
 
     if ("EMPLOYEE".equalsIgnoreCase(role) || "HR".equalsIgnoreCase(role)) {
@@ -375,24 +382,21 @@ public class MainMenu extends javax.swing.JFrame {
         attendanceWindow.setVisible(true);
         attendanceWindow.setLocationRelativeTo(null);
 
-    } else if ("SUPPORT".equalsIgnoreCase(role)) {
+    } else if ("SUPPORT".equalsIgnoreCase(role) || "ADMIN".equalsIgnoreCase(role)) {
         String supervisorFullName = User.getLoggedInUser().getLastName().trim() + " " +
                                     User.getLoggedInUser().getFirstName().trim();
 
         EmployeeTable attendanceTable = new EmployeeTable(supervisorFullName, "Employee Attendance");
         attendanceTable.setVisible(true);
         attendanceTable.setLocationRelativeTo(null);
-
     } else {
-        String input = JOptionPane.showInputDialog(this, "Enter Employee Number:", "View Attendance", JOptionPane.QUESTION_MESSAGE);
-        if (input != null && !input.trim().isEmpty()) {
-            Attendance attendanceWindow = new Attendance(input);
-            attendanceWindow.setVisible(true);
-            attendanceWindow.setLocationRelativeTo(null);
-        } else {
-            JOptionPane.showMessageDialog(this, "Employee Number is required.", "Input Error", JOptionPane.WARNING_MESSAGE);
-        }
+        // Optional fallback for unknown roles
+        JOptionPane.showMessageDialog(this,
+            "Your role does not support viewing the Attendance screen.",
+            "Access Denied",
+            JOptionPane.WARNING_MESSAGE);
     }
+
     }//GEN-LAST:event_jButtonAttendanceActionPerformed
 
     /**

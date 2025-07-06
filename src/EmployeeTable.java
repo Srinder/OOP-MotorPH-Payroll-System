@@ -7,8 +7,6 @@ import javax.swing.JOptionPane;
 import java.util.Vector;  
 import java.util.Arrays;  
 import java.awt.Dimension;
-import java.awt.event.ActionListener;
-import java.awt.event.ActionEvent;
 
 
 
@@ -48,19 +46,21 @@ public class EmployeeTable extends javax.swing.JFrame {
     public EmployeeTable(String supervisorId, String labelText) {
     instance = this;
     initComponents();
-    applyRoleRestrictions();
 
-    jLabelEmpInfo.setText(labelText);
+    jLabelEmpInfo.setText(labelText);     // ✅ Display view mode label
+    applyRoleRestrictions();              // 🔐 Role-based button disabling & layout fixes
 
+    // 🔘 Set jButtonView label based on view mode
     if ("Employee Attendance".equalsIgnoreCase(labelText)) {
         jButtonView.setText("View Attendance");
-        jButtonView.setVisible(true);  // Ensure it's visible and functional
-
-        
+        jButtonView.setVisible(true);
+    } else if ("Employee Payslip".equalsIgnoreCase(labelText)) {
+        jButtonView.setText("View Payslip");
+        jButtonView.setVisible(true);
     }
 
+    // ❎ Ensure window closes cleanly
     setDefaultCloseOperation(javax.swing.WindowConstants.DISPOSE_ON_CLOSE);
-
     addWindowListener(new java.awt.event.WindowAdapter() {
         @Override
         public void windowClosing(java.awt.event.WindowEvent e) {
@@ -68,34 +68,54 @@ public class EmployeeTable extends javax.swing.JFrame {
         }
     });
 
-    configureTableModel();
-    loadSupervisedEmployees(supervisorId); 
-    adjustTableSettings();
+    configureTableModel();  // 🧱 Initialize table columns
+
+    // 🗃️ Load employee data based on label + role
+    String role = User.getLoggedInUser().getRole().trim();
+
+    if ("Employee Payslip".equalsIgnoreCase(labelText)) {
+        loadEmployeeData(); // All employees shown in Payslip mode
+
+    } else if ("Employee Attendance".equalsIgnoreCase(labelText)) {
+        if ("ADMIN".equalsIgnoreCase(role)) {
+            loadEmployeeData(); // ADMIN sees full list for Attendance
+        } else {
+            loadSupervisedEmployees(supervisorId); // SUPPORT sees filtered list
+        }
+
+    } else {
+        loadSupervisedEmployees(supervisorId); // Fallback for any other label
+    }
+
+    adjustTableSettings(); // 🧩 Final formatting and column alignment
 }
+
+
+
 
    
     private void applyRoleRestrictions() {
     String role = User.getLoggedInUser().getRole();
 
-    if ("SUPPORT".equalsIgnoreCase(role)) {
-        Dimension buttonSize = new Dimension(120, 35); // 👈 Match ADMIN button size
+    if ("SUPPORT".equalsIgnoreCase(role) || "ADMIN".equalsIgnoreCase(role)) {
+        Dimension originalSize = new Dimension(120, 35); 
 
         if (jButtonAdd != null) {
-            jButtonAdd.setText("");                    // Remove label
-            jButtonAdd.setEnabled(false);              // Disable interaction
-            jButtonAdd.setPreferredSize(buttonSize);   // Preserve space
-            jButtonAdd.setMinimumSize(buttonSize);
-            jButtonAdd.setMaximumSize(buttonSize);
-            jButtonAdd.setContentAreaFilled(false);    // Remove background
-            jButtonAdd.setBorderPainted(false);        // Remove border
+            jButtonAdd.setText("");
+            jButtonAdd.setEnabled(false);
+            jButtonAdd.setPreferredSize(originalSize);
+            jButtonAdd.setMinimumSize(originalSize);
+            jButtonAdd.setMaximumSize(originalSize);
+            jButtonAdd.setContentAreaFilled(false);
+            jButtonAdd.setBorderPainted(false);
         }
 
         if (jButtonUpdate != null) {
             jButtonUpdate.setText("");
             jButtonUpdate.setEnabled(false);
-            jButtonUpdate.setPreferredSize(buttonSize);
-            jButtonUpdate.setMinimumSize(buttonSize);
-            jButtonUpdate.setMaximumSize(buttonSize);
+            jButtonUpdate.setPreferredSize(originalSize);
+            jButtonUpdate.setMinimumSize(originalSize);
+            jButtonUpdate.setMaximumSize(originalSize);
             jButtonUpdate.setContentAreaFilled(false);
             jButtonUpdate.setBorderPainted(false);
         }
@@ -103,15 +123,14 @@ public class EmployeeTable extends javax.swing.JFrame {
         if (jButtonDelete != null) {
             jButtonDelete.setText("");
             jButtonDelete.setEnabled(false);
-            jButtonDelete.setPreferredSize(buttonSize);
-            jButtonDelete.setMinimumSize(buttonSize);
-            jButtonDelete.setMaximumSize(buttonSize);
+            jButtonDelete.setPreferredSize(originalSize);
+            jButtonDelete.setMinimumSize(originalSize);
+            jButtonDelete.setMaximumSize(originalSize);
             jButtonDelete.setContentAreaFilled(false);
             jButtonDelete.setBorderPainted(false);
         }
     }
 }
-
 
 
 
@@ -353,11 +372,11 @@ public class EmployeeTable extends javax.swing.JFrame {
                                 .addComponent(jButtonExit, javax.swing.GroupLayout.PREFERRED_SIZE, 85, javax.swing.GroupLayout.PREFERRED_SIZE))
                             .addComponent(jScrollPane1, javax.swing.GroupLayout.PREFERRED_SIZE, 755, javax.swing.GroupLayout.PREFERRED_SIZE))
                         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                        .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING, false)
+                        .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
                             .addComponent(jButtonView, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                            .addComponent(jButtonUpdate, javax.swing.GroupLayout.DEFAULT_SIZE, 81, Short.MAX_VALUE)
+                            .addComponent(jButtonUpdate, javax.swing.GroupLayout.DEFAULT_SIZE, 95, Short.MAX_VALUE)
                             .addComponent(jButtonDelete, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))))
-                .addGap(52, 52, 52))
+                .addGap(38, 38, 38))
         );
         jPanel1Layout.setVerticalGroup(
             jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING)
@@ -370,7 +389,7 @@ public class EmployeeTable extends javax.swing.JFrame {
                 .addComponent(jButtonDelete, javax.swing.GroupLayout.PREFERRED_SIZE, 34, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
             .addGroup(jPanel1Layout.createSequentialGroup()
-                .addContainerGap(16, Short.MAX_VALUE)
+                .addContainerGap(11, Short.MAX_VALUE)
                 .addComponent(jLabelEmpInfo)
                 .addGap(18, 18, 18)
                 .addComponent(jScrollPane1, javax.swing.GroupLayout.PREFERRED_SIZE, 472, javax.swing.GroupLayout.PREFERRED_SIZE)
@@ -412,6 +431,7 @@ public class EmployeeTable extends javax.swing.JFrame {
     }//GEN-LAST:event_jButtonAddActionPerformed
 
     private void jButtonViewActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButtonViewActionPerformed
+                        
     int selectedRow = jTableEmpTable.getSelectedRow(); // Get selected row index
 
     if (selectedRow != -1) {
@@ -424,6 +444,13 @@ public class EmployeeTable extends javax.swing.JFrame {
                 Attendance attendanceWindow = new Attendance(empNumber);
                 attendanceWindow.setVisible(true);
                 attendanceWindow.setLocationRelativeTo(null);
+
+            } else if ("Employee Payslip".equalsIgnoreCase(viewMode)) {
+                // 💳 ADMIN/SUPPORT → open Payslip screen
+                Payslip payslipWindow = new Payslip(empNumber);
+                payslipWindow.setVisible(true);
+                payslipWindow.setLocationRelativeTo(null);
+
             } else {
                 // 📝 Default view → open EditEmpInfo in read-only mode
                 int empNumInt = Integer.parseInt(empNumber); // Validate number format
