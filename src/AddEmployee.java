@@ -1,5 +1,9 @@
 import javax.swing.JOptionPane;
 import java.util.List;
+import com.opencsv.CSVWriter;
+import java.io.FileWriter;
+import java.io.IOException;
+
 
 /**
  * `AddEmployee` class provides a GUI for adding new employee records.
@@ -248,30 +252,28 @@ public class AddEmployee extends javax.swing.JFrame {
 
     private void jButtonSubmitActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButtonSubmitActionPerformed
         try {
-        // Retrieve entered data, ensuring required fields are valid
+        // 📥 Get input data
         int empNum = Integer.parseInt(jTxtEmpNum.getText().trim());
         String lastName = jTxtLastName.getText().trim();
         String firstName = jTxtFirstName.getText().trim();
         String phoneNumber = jTxtPhoneNumber.getText().trim();
         String status = jTxtStatus.getText().trim().isEmpty() ? "NA" : jTxtStatus.getText().trim();
         String position = jTxtPosition.getText().trim().isEmpty() ? "NA" : jTxtPosition.getText().trim();
-        String supervisor = "NA"; // No supervisor input field, defaulting to "NA"
-        String address = "NA"; // Default placeholder for missing address
+        String supervisor = "NA";
+        String address = "NA";
         String birthday = "NA";
 
-        // Convert SSS, PAGIBIG, PHILHEALTH, TIN to integers, handling empty fields
-        int sssNumber = jTextSSS.getText().trim().isEmpty() ? 0 : Integer.parseInt(jTextSSS.getText().trim());
-        int philHealthNumber = jTextPHILHEALTH.getText().trim().isEmpty() ? 0 : Integer.parseInt(jTextPHILHEALTH.getText().trim());
-        int tinNumber = jTextTIN.getText().trim().isEmpty() ? 0 : Integer.parseInt(jTextTIN.getText().trim());
-        int pagIbigNumber = jTextPAGIBIG.getText().trim().isEmpty() ? 0 : Integer.parseInt(jTextPAGIBIG.getText().trim());
+        String sssNumber = jTextSSS.getText().trim().isEmpty() ? "NA" : jTextSSS.getText().trim();
+        String pagIbigNumber = jTextPAGIBIG.getText().trim().isEmpty() ? "NA" : jTextPAGIBIG.getText().trim();
+        String philHealthNumber = jTextPHILHEALTH.getText().trim().isEmpty() ? "NA" : jTextPHILHEALTH.getText().trim();
+        String tinNumber = jTextTIN.getText().trim().isEmpty() ? "NA" : jTextTIN.getText().trim();
 
-        // Ensure required fields are not empty
+
         if (lastName.isEmpty() || firstName.isEmpty() || phoneNumber.isEmpty()) {
             JOptionPane.showMessageDialog(this, "Error: Last Name, First Name, and Phone Number are required!", "Validation Error", JOptionPane.ERROR_MESSAGE);
             return;
         }
 
-        // Default placeholders for missing financial data
         double basicSalary = 0.0;
         double riceSubsidy = 0.0;
         double phoneAllowance = 0.0;
@@ -280,37 +282,88 @@ public class AddEmployee extends javax.swing.JFrame {
         double hourlyRate = 0.0;
         double withholdingTax = 0.0;
 
-        // Create Employee object with corrected integer ID fields
+        // 🧾 Create employee object
         Employee newEmployee = new Employee(empNum, lastName, firstName, phoneNumber, status, position, supervisor,
-    address, String.valueOf(sssNumber), String.valueOf(philHealthNumber), 
-    String.valueOf(tinNumber), String.valueOf(pagIbigNumber), 
-    basicSalary, riceSubsidy, phoneAllowance, clothingAllowance, 
-    grossSemiMonthlyRate, hourlyRate, withholdingTax, birthday); // Birthday MUST be last
+            address, String.valueOf(sssNumber), String.valueOf(philHealthNumber),
+            String.valueOf(tinNumber), String.valueOf(pagIbigNumber),
+            basicSalary, riceSubsidy, phoneAllowance, clothingAllowance,
+            grossSemiMonthlyRate, hourlyRate, withholdingTax, birthday);
 
-
-;
-
-
-        // Save employee record via EmployeeFileHandler
+        // 📂 Save employee
         EmployeeFileHandler.saveEmployee(newEmployee);
-
         JOptionPane.showMessageDialog(this, "Employee added successfully!", "Success", JOptionPane.INFORMATION_MESSAGE);
 
-        // Refresh Employee Number for next entry
-        generateNextEmpNum();
+        // 🧑‍💻 Generate login credentials
+        String username = (firstName.charAt(0) + lastName).toLowerCase().replaceAll("\\s+", "");
+        String password = "Password123";
 
-        // Refresh the table view to reflect new entries
-        if (EmployeeTable.getInstance() != null) {
-            EmployeeTable.getInstance().refreshEmployeeTable(); 
+        // 🎉 Show login creation message
+        JOptionPane.showMessageDialog(this,
+            "Login for Employee " + firstName + " " + lastName + " has been created.\n" +
+            "Username: " + username + "\nPassword: " + password,
+            "Login Created", JOptionPane.INFORMATION_MESSAGE);
+
+        // 🔐 Select access level
+        String[] roles = {"EMPLOYEE", "SUPPORT", "HR", "ADMIN"};
+        String accessLevel = (String) JOptionPane.showInputDialog(
+            this,
+            "Select Access Level for this Employee:",
+            "Access Assignment",
+            JOptionPane.QUESTION_MESSAGE,
+            null,
+            roles,
+            roles[0]
+        );
+
+        if (accessLevel == null || accessLevel.trim().isEmpty()) {
+            JOptionPane.showMessageDialog(this, "Access level is required.", "Validation Error", JOptionPane.ERROR_MESSAGE);
+            return;
         }
 
-        // Close the form after successful submission
+        // ❓ Ask for security answer
+        String answer = JOptionPane.showInputDialog(
+            this,
+            "Answer to: What is your favorite food?",
+            "Security Question",
+            JOptionPane.QUESTION_MESSAGE
+        );
+
+        if (answer == null || answer.trim().isEmpty()) {
+            JOptionPane.showMessageDialog(this, "Security answer is required.", "Validation Error", JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+
+        // 📄 Save login to employee_logins.csv
+        try (CSVWriter writer = new CSVWriter(new FileWriter("src/data/employee_logins.csv", true))) {
+            String[] loginRow = {
+                String.valueOf(empNum),
+                lastName,
+                firstName,
+                position,
+                supervisor,
+                username,
+                password,
+                "What is your favorite food?",
+                answer,
+                accessLevel
+            };
+            writer.writeNext(loginRow);
+        } catch (IOException ex) {
+            JOptionPane.showMessageDialog(this, "Login could not be saved: " + ex.getMessage(), "Login Error", JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+
+        // 🔄 Refresh view
+        generateNextEmpNum();
+        if (EmployeeTable.getInstance() != null) {
+            EmployeeTable.getInstance().refreshEmployeeTable();
+        }
+
         dispose();
 
     } catch (NumberFormatException e) {
         JOptionPane.showMessageDialog(this, "Error: Invalid input! Ensure numeric values are entered correctly.", "Input Error", JOptionPane.ERROR_MESSAGE);
     }
-
     }//GEN-LAST:event_jButtonSubmitActionPerformed
 
     private void jButtonCancelActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButtonCancelActionPerformed

@@ -66,7 +66,7 @@
           <Group type="103" groupAlignment="0" attributes="0">
               <Group type="102" attributes="0">
                   <EmptySpace min="39" pref="39" max="-2" attributes="0"/>
-                  <Component id="jLabelTitle2" min="-2" max="-2" attributes="0"/>
+                  <Component id="jLabelWelcome" min="-2" max="-2" attributes="0"/>
                   <EmptySpace min="240" pref="240" max="-2" attributes="0"/>
                   <Group type="103" groupAlignment="0" attributes="0">
                       <Group type="102" attributes="0">
@@ -99,14 +99,14 @@
               </Group>
               <Group type="102" alignment="1" attributes="0">
                   <EmptySpace min="0" pref="0" max="32767" attributes="0"/>
-                  <Component id="jLabelTitle2" min="-2" max="-2" attributes="0"/>
+                  <Component id="jLabelWelcome" min="-2" max="-2" attributes="0"/>
                   <EmptySpace min="-2" pref="30" max="-2" attributes="0"/>
               </Group>
           </Group>
         </DimensionLayout>
       </Layout>
       <SubComponents>
-        <Component class="javax.swing.JLabel" name="jLabelTitle2">
+        <Component class="javax.swing.JLabel" name="jLabelWelcome">
           <Properties>
             <Property name="background" type="java.awt.Color" editor="org.netbeans.beaninfo.editors.ColorEditor">
               <Color blue="ff" green="ff" red="ff" type="rgb"/>

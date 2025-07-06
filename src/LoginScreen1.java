@@ -8,13 +8,17 @@
  * @author singh
  */
 
-import java.awt.Font;
 import javax.swing.JOptionPane;
+import javax.swing.JPasswordField;
+
 
 public class LoginScreen1 extends javax.swing.JFrame {
     
     private final String DEFAULT_USERNAME = "admin";
     private final String DEFAULT_PASSWORD = "12345";
+    private int failedAttempts = 0;
+    private long blockUntilTime = 0;
+
 
 
     /**
@@ -43,6 +47,7 @@ public class LoginScreen1 extends javax.swing.JFrame {
         jButtonLogin = new javax.swing.JButton();
         jPasswordField = new javax.swing.JPasswordField();
         jLabelLogin2 = new javax.swing.JLabel();
+        jButtonReset = new javax.swing.JButton();
 
         setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
         getContentPane().setLayout(new org.netbeans.lib.awtextra.AbsoluteLayout());
@@ -79,7 +84,7 @@ public class LoginScreen1 extends javax.swing.JFrame {
                 jButtonLoginActionPerformed(evt);
             }
         });
-        jPanel2.add(jButtonLogin, new org.netbeans.lib.awtextra.AbsoluteConstraints(256, 396, 120, 32));
+        jPanel2.add(jButtonLogin, new org.netbeans.lib.awtextra.AbsoluteConstraints(260, 360, 120, 32));
 
         jPasswordField.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
@@ -93,37 +98,156 @@ public class LoginScreen1 extends javax.swing.JFrame {
         jLabelLogin2.setText("Employee Login");
         jPanel2.add(jLabelLogin2, new org.netbeans.lib.awtextra.AbsoluteConstraints(168, 148, -1, -1));
 
+        jButtonReset.setBackground(new java.awt.Color(14, 49, 113));
+        jButtonReset.setForeground(new java.awt.Color(255, 255, 255));
+        jButtonReset.setText("Reset Password");
+        jButtonReset.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                jButtonResetActionPerformed(evt);
+            }
+        });
+        jPanel2.add(jButtonReset, new org.netbeans.lib.awtextra.AbsoluteConstraints(260, 400, 120, 32));
+
         getContentPane().add(jPanel2, new org.netbeans.lib.awtextra.AbsoluteConstraints(413, 0, 590, 600));
 
         pack();
     }// </editor-fold>//GEN-END:initComponents
 
     private void jButtonLoginActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButtonLoginActionPerformed
-        // TODO add your handling code here:
-        String username = jTextFieldUsername.getText();
-        String password = jPasswordField.getText();
-        
-  if (username.equals("admin") && password.equals("1234")) {
-        JOptionPane.showMessageDialog(this, "Login Successful!");
-        
-        //Open MainMenu screen
-        MainMenu main = new MainMenu();
-        main.setVisible(true);  //show main screen
-        main.setLocationRelativeTo(null); //Center the screen (optional)
-        
-        this.dispose(); //close the log in screen
-    }else {
-        JOptionPane.showMessageDialog(this, "Invalid username or password.", "Login Failed", JOptionPane.ERROR_MESSAGE);
-        
-        //Clear the textfields
+    long currentTime = System.currentTimeMillis();
+
+    // ⏳ Check if user is currently blocked
+    if (currentTime < blockUntilTime) {
+        long secondsRemaining = (blockUntilTime - currentTime) / 1000;
+        JOptionPane.showMessageDialog(this,
+            "Too many incorrect attempts.\nYour account is temporarily blocked for " + secondsRemaining + " seconds.\n" +
+            "Please wait or reset your password.",
+            "Login Blocked",
+            JOptionPane.WARNING_MESSAGE);
+        return;
+    }
+
+    String username = jTextFieldUsername.getText().trim();
+    String password = jPasswordField.getText().trim();
+
+    User user = UserDatabase.authenticate(username, password);
+
+    if (user != null) {
+        // 🔐 Successful login
+        User.setLoggedInUser(user);
+        failedAttempts = 0;
+        blockUntilTime = 0;
+
+        JOptionPane.showMessageDialog(this, "Welcome, " + user.getFirstName() + "!");
+
+        MainMenu main = new MainMenu(user);
+        main.setVisible(true);
+        main.setLocationRelativeTo(null);
+
+        // Optional role-based actions (kept intact)
+        switch (user.getRole().toUpperCase()) {
+            case "EMPLOYEE":
+                // new Attendance(user.getEmployeeId()).setVisible(true);
+                break;
+            case "HR":
+                // optional: HR interface
+                break;
+            case "SUPPORT":
+                // optional: Support interface
+                break;
+            case "ADMIN":
+                // optional: Admin interface
+                break;
+        }
+
+        this.dispose();
+    } else {
+        // ❌ Incorrect login
+        failedAttempts++;
+
+        if (failedAttempts >= 3) {
+            blockUntilTime = System.currentTimeMillis() + (5 * 60 * 1000); // 5-minute lockout
+            JOptionPane.showMessageDialog(this,
+                "Invalid login 3 times.\nAccount is locked for 5 minutes.\n" +
+                "Consider resetting your password.",
+                "Account Temporarily Blocked",
+                JOptionPane.ERROR_MESSAGE);
+        } else {
+            JOptionPane.showMessageDialog(this,
+                "Invalid username or password.\nAttempt " + failedAttempts + " of 3.",
+                "Login Failed",
+                JOptionPane.WARNING_MESSAGE);
+        }
+
         jTextFieldUsername.setText("");
         jPasswordField.setText("");
-        }         
+    }
     }//GEN-LAST:event_jButtonLoginActionPerformed
 
     private void jPasswordFieldActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jPasswordFieldActionPerformed
         // TODO add your handling code here:
     }//GEN-LAST:event_jPasswordFieldActionPerformed
+
+    private void jButtonResetActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButtonResetActionPerformed
+    String empId = JOptionPane.showInputDialog(this, "Enter your Employee ID:");
+    if (empId == null || empId.trim().isEmpty()) return;
+
+    String question = UserDatabase.getSecurityQuestion(empId.trim());
+    if (question == null) {
+        JOptionPane.showMessageDialog(this, "Employee ID not found.", "Error", JOptionPane.ERROR_MESSAGE);
+        return;
+    }
+
+    String answer = JOptionPane.showInputDialog(this, question);
+    if (answer == null || answer.trim().isEmpty()) return;
+
+    boolean isCorrect = UserDatabase.verifySecurityAnswer(empId.trim(), answer.trim());
+    if (!isCorrect) {
+        JOptionPane.showMessageDialog(this, "Incorrect answer. Please try again.", "Security Check Failed", JOptionPane.WARNING_MESSAGE);
+        return;
+    }
+
+    String newPassword = null;
+    boolean validPassword = false;
+
+    // 🔁 Repeat until user enters a valid password or cancels
+    while (!validPassword) {
+        JPasswordField passwordField = new JPasswordField();
+        passwordField.setEchoChar('*');
+
+        int confirm = JOptionPane.showConfirmDialog(this, passwordField, "Enter your new password:", JOptionPane.OK_CANCEL_OPTION);
+
+        if (confirm != JOptionPane.OK_OPTION) {
+            JOptionPane.showMessageDialog(this, "Password reset canceled.");
+            return;
+        }
+
+        newPassword = new String(passwordField.getPassword()).trim();
+
+        boolean isAlphanumeric = newPassword.matches("^[a-zA-Z0-9]+$");
+        boolean hasCapital = newPassword.matches(".*[A-Z].*");
+        boolean hasNumber = newPassword.matches(".*\\d.*");
+
+        if (newPassword.isEmpty() || !isAlphanumeric || !hasCapital || !hasNumber) {
+            JOptionPane.showMessageDialog(this,
+                "Password must meet the following requirements:\n" +
+                "- Only letters and numbers (no symbols)\n" +
+                "- At least one uppercase letter\n" +
+                "- At least one number",
+                "Invalid Password Format",
+                JOptionPane.ERROR_MESSAGE);
+        } else {
+            validPassword = true;
+        }
+    }
+
+    boolean updated = UserDatabase.updatePassword(empId.trim(), newPassword);
+    if (updated) {
+        JOptionPane.showMessageDialog(this, "Password reset successfully.");
+    } else {
+        JOptionPane.showMessageDialog(this, "Failed to update password.", "Update Failed", JOptionPane.ERROR_MESSAGE);
+    }
+    }//GEN-LAST:event_jButtonResetActionPerformed
 
     /**
      * @param args the command line arguments
@@ -162,6 +286,7 @@ public class LoginScreen1 extends javax.swing.JFrame {
 
     // Variables declaration - do not modify//GEN-BEGIN:variables
     private javax.swing.JButton jButtonLogin;
+    private javax.swing.JButton jButtonReset;
     private javax.swing.JLabel jLabelLogin2;
     private javax.swing.JLabel jLabelPassword;
     private javax.swing.JLabel jLabelUsername;

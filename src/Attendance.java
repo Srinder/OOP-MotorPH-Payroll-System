@@ -1,28 +1,52 @@
 import javax.swing.JFrame;
-import javax.swing.table.DefaultTableModel;
-import java.time.LocalDate;
-import javax.swing.JOptionPane;
 import java.util.List;
+import java.time.LocalDate;
 import java.util.Map;
-
+import java.util.Vector;
+import javax.swing.JOptionPane;
+import javax.swing.table.DefaultTableModel;
+import java.util.ArrayList;
+import java.io.IOException;
 
 
 public class Attendance extends JFrame {
     private String empNo;   
 
     public Attendance(String empNo) {
-        this.empNo = empNo;
-        initComponents();
-        loadEmployeeName(); // ✅ Load employee name
-        employeeIDLabel.setText("Employee ID: " + empNo);
-        loadAttendanceRecords(empNo, LocalDate.now().minusMonths(1), LocalDate.now()); // ✅ Load last month's records
+    this.empNo = empNo;
+    initComponents();
+    applyRoleRestrictions();
+    loadEmployeeName(); // ✅ Load employee name
+    employeeIDLabel.setText("Employee ID: " + empNo);
+    loadAttendanceRecords(empNo, LocalDate.now().minusMonths(1), LocalDate.now()); // ✅ Load last month's records
+
+    // 👥 Restrict SUPPORT editing if viewing their own record
+    String loggedInEmpId = User.getLoggedInUser().getEmployeeId().trim();
+    String role = User.getLoggedInUser().getRole().trim();
+
+    if ("SUPPORT".equalsIgnoreCase(role) && empNo.equalsIgnoreCase(loggedInEmpId)) {
+        updateAttendanceButton.setVisible(false);
+        jButtonSave.setVisible(false);
     }
+}
 
     public Attendance() {
         initComponents();
     }
+    
+    private void applyRoleRestrictions() {
+    String role = User.getLoggedInUser().getRole();
 
-    // ✅ Fetch and Display Employee Name in jLabel3
+    if ("EMPLOYEE".equalsIgnoreCase(role) || "HR".equalsIgnoreCase(role)) {
+        if (updateAttendanceButton != null) {
+            updateAttendanceButton.setVisible(false);
+        }
+        if (jButtonSave != null) {
+            jButtonSave.setVisible(false);
+        }
+    }
+}
+
     private void loadEmployeeName() {
         String employeeName = getEmployeeName(empNo);
         jLabel3.setText("Employee Name: " + employeeName); // ✅ Set name in GUI
@@ -51,7 +75,7 @@ public class Attendance extends JFrame {
     }
 
 }
-
+    
 
 
     /**
@@ -79,6 +103,8 @@ public class Attendance extends JFrame {
         jLabel5 = new javax.swing.JLabel();
         checkAttendanceButton = new javax.swing.JButton();
         employeeIDLabel = new javax.swing.JLabel();
+        updateAttendanceButton = new javax.swing.JButton();
+        jButtonSave = new javax.swing.JButton();
 
         jLabel2.setText("jLabel2");
 
@@ -119,7 +145,7 @@ public class Attendance extends JFrame {
                 jButton1ActionPerformed(evt);
             }
         });
-        jPanel1.add(jButton1, new org.netbeans.lib.awtextra.AbsoluteConstraints(700, 601, 85, -1));
+        jPanel1.add(jButton1, new org.netbeans.lib.awtextra.AbsoluteConstraints(700, 600, 85, -1));
 
         jLabel3.setFont(new java.awt.Font("Segoe UI", 1, 18)); // NOI18N
         jLabel3.setForeground(new java.awt.Color(255, 255, 255));
@@ -144,22 +170,42 @@ public class Attendance extends JFrame {
                 checkAttendanceButtonActionPerformed(evt);
             }
         });
-        jPanel1.add(checkAttendanceButton, new org.netbeans.lib.awtextra.AbsoluteConstraints(501, 119, 281, -1));
+        jPanel1.add(checkAttendanceButton, new org.netbeans.lib.awtextra.AbsoluteConstraints(650, 120, 140, -1));
 
         employeeIDLabel.setFont(new java.awt.Font("Segoe UI", 1, 18)); // NOI18N
         employeeIDLabel.setForeground(new java.awt.Color(255, 255, 255));
         employeeIDLabel.setText("Employee ID: ");
         jPanel1.add(employeeIDLabel, new org.netbeans.lib.awtextra.AbsoluteConstraints(32, 115, 324, -1));
 
+        updateAttendanceButton.setBackground(new java.awt.Color(0, 102, 102));
+        updateAttendanceButton.setForeground(new java.awt.Color(255, 255, 255));
+        updateAttendanceButton.setText("Update Attendance");
+        updateAttendanceButton.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                updateAttendanceButtonActionPerformed(evt);
+            }
+        });
+        jPanel1.add(updateAttendanceButton, new org.netbeans.lib.awtextra.AbsoluteConstraints(491, 119, 140, -1));
+
+        jButtonSave.setBackground(new java.awt.Color(153, 0, 0));
+        jButtonSave.setForeground(new java.awt.Color(255, 255, 255));
+        jButtonSave.setText("Save");
+        jButtonSave.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                jButtonSaveActionPerformed(evt);
+            }
+        });
+        jPanel1.add(jButtonSave, new org.netbeans.lib.awtextra.AbsoluteConstraints(600, 600, 85, -1));
+
         javax.swing.GroupLayout layout = new javax.swing.GroupLayout(getContentPane());
         getContentPane().setLayout(layout);
         layout.setHorizontalGroup(
             layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addComponent(jPanel1, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+            .addComponent(jPanel1, javax.swing.GroupLayout.DEFAULT_SIZE, 824, Short.MAX_VALUE)
         );
         layout.setVerticalGroup(
             layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addComponent(jPanel1, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+            .addComponent(jPanel1, javax.swing.GroupLayout.DEFAULT_SIZE, 638, Short.MAX_VALUE)
         );
 
         pack();
@@ -171,31 +217,140 @@ public class Attendance extends JFrame {
     }//GEN-LAST:event_jButton1ActionPerformed
 
     private void checkAttendanceButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_checkAttendanceButtonActionPerformed
-                                                   
     if (startDateLabel.getDate() != null && endDateLabel.getDate() != null) {
-        LocalDate startDate = startDateLabel.getDate().toInstant().atZone(java.time.ZoneId.systemDefault()).toLocalDate();
-        LocalDate endDate = endDateLabel.getDate().toInstant().atZone(java.time.ZoneId.systemDefault()).toLocalDate();
+        LocalDate startDate = startDateLabel.getDate().toInstant()
+                .atZone(java.time.ZoneId.systemDefault())
+                .toLocalDate();
 
+        LocalDate endDate = endDateLabel.getDate().toInstant()
+                .atZone(java.time.ZoneId.systemDefault())
+                .toLocalDate();
+
+        // ✅ Load records
         loadAttendanceRecords(empNo, startDate, endDate);
 
         DefaultTableModel model = (DefaultTableModel) jTableAttendance.getModel();
+
+        // 🕒 Compute daily attendance stats
         for (int row = 0; row < model.getRowCount(); row++) {
-            String dateStr = (String) model.getValueAt(row, 0); 
+            String dateStr = (String) model.getValueAt(row, 0); // Date column
 
             if (dateStr != null && !dateStr.trim().isEmpty()) {
-                Map<String, Double> attendanceMinutes = AttendanceFileHandler.computeDailyAttendanceMinutes(Integer.parseInt(empNo), dateStr);
-                
-                model.setValueAt(attendanceMinutes.get("Late"), row, 3); // ✅ Updates Late column
-                model.setValueAt(attendanceMinutes.get("Overtime"), row, 4); // ✅ Updates Overtime column
-                model.setValueAt(attendanceMinutes.get("Undertime"), row, 5); // ✅ Updates Undertime column
+                Map<String, Double> attendanceMinutes = AttendanceFileHandler.computeDailyAttendanceMinutes(
+                        Integer.parseInt(empNo), dateStr);
+
+                model.setValueAt(attendanceMinutes.get("Late"), row, 3);      // Late = Column 3
+                model.setValueAt(attendanceMinutes.get("Overtime"), row, 4);  // Overtime = Column 4
+                model.setValueAt(attendanceMinutes.get("Undertime"), row, 5); // Undertime = Column 5
             }
         }
+
+        // 🔒 Lock the table by rebuilding a non-editable model
+        @SuppressWarnings("rawtypes")
+        Vector data = model.getDataVector(); // don't cast to Vector<Vector<Object>> to avoid build error
+
+        Vector<String> columnNames = new Vector<>();
+        for (int i = 0; i < model.getColumnCount(); i++) {
+            columnNames.add(model.getColumnName(i));
+        }
+
+        DefaultTableModel lockedModel = new DefaultTableModel(data, columnNames) {
+            @Override
+            public boolean isCellEditable(int row, int column) {
+                return false; // Prevent editing for all cells
+            }
+        };
+
+        jTableAttendance.setModel(lockedModel);
+
     } else {
-        JOptionPane.showMessageDialog(this, "Please select both start and end dates.", "Date Range Required", JOptionPane.WARNING_MESSAGE);
+        JOptionPane.showMessageDialog(this,
+                "Please select both start and end dates.",
+                "Date Range Required",
+                JOptionPane.WARNING_MESSAGE);
+    }
+    }//GEN-LAST:event_checkAttendanceButtonActionPerformed
+
+    private void updateAttendanceButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_updateAttendanceButtonActionPerformed
+    DefaultTableModel model = (DefaultTableModel) jTableAttendance.getModel();
+
+    @SuppressWarnings("rawtypes")
+    Vector data = model.getDataVector();
+
+    Vector<String> columnNames = new Vector<>();
+    for (int i = 0; i < model.getColumnCount(); i++) {
+        columnNames.add(model.getColumnName(i));
     }
 
+    // ✅ Make only Time In (1) and Time Out (2) editable
+    DefaultTableModel editableModel = new DefaultTableModel(data, columnNames) {
+        @Override
+        public boolean isCellEditable(int row, int column) {
+            return column == 1 || column == 2; // only Time In / Time Out
+        }
+    };
 
-    }//GEN-LAST:event_checkAttendanceButtonActionPerformed
+    jTableAttendance.setModel(editableModel);
+
+    JOptionPane.showMessageDialog(this,
+        "Table is now editable. You can update Time In and Time Out.",
+        "Update Mode Enabled",
+        JOptionPane.INFORMATION_MESSAGE);
+    }//GEN-LAST:event_updateAttendanceButtonActionPerformed
+
+    private void jButtonSaveActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButtonSaveActionPerformed
+    DefaultTableModel model = (DefaultTableModel) jTableAttendance.getModel();
+    List<AttendanceRecord> updatedRecords = new ArrayList<>();
+
+    // Extract employee ID from label (e.g., "Employee ID: 10034")
+    String labelText = employeeIDLabel.getText().trim();
+    String empNo = labelText.replace("Employee ID:", "").trim();
+
+    // Optional: Name labels if needed
+    String firstName = "";
+    String lastName = "";
+
+    // Build updated records from Time IN/OUT
+    for (int row = 0; row < model.getRowCount(); row++) {
+        String date = model.getValueAt(row, 0).toString().trim();      // Column 0: Date
+        String logIn = model.getValueAt(row, 1).toString().trim();     // Column 1: Time IN
+        String logOut = model.getValueAt(row, 2).toString().trim();    // Column 2: Time OUT
+
+        AttendanceRecord record = new AttendanceRecord(empNo, lastName, firstName, date, logIn, logOut);
+        updatedRecords.add(record);
+    }
+
+    for (AttendanceRecord r : updatedRecords) {
+    }
+
+    try {
+        boolean success = AttendanceFileHandler.updateAttendanceRecords(updatedRecords);
+
+        if (success) {
+            JOptionPane.showMessageDialog(this, "Attendance records saved successfully.",
+                    "Save Complete", JOptionPane.INFORMATION_MESSAGE);
+
+            // ✅ Recalculate Late/OT/Undertime after save
+            int employeeId = Integer.parseInt(empNo);
+            for (int row = 0; row < model.getRowCount(); row++) {
+                String date = model.getValueAt(row, 0).toString().trim();
+
+                Map<String, Double> result = AttendanceFileHandler.computeDailyAttendanceMinutes(employeeId, date);
+                model.setValueAt(result.get("Late"), row, 3);       // Column 3: Late
+                model.setValueAt(result.get("Overtime"), row, 4);   // Column 4: Overtime
+                model.setValueAt(result.get("Undertime"), row, 5);  // Column 5: Undertime
+            }
+        } else {
+            JOptionPane.showMessageDialog(this, "No matching records found to update.",
+                    "No Changes Made", JOptionPane.WARNING_MESSAGE);
+        }
+
+    } catch (IOException | com.opencsv.exceptions.CsvValidationException e) {
+        JOptionPane.showMessageDialog(this, "Error saving attendance:\n" + e.getMessage(),
+                "Save Error", JOptionPane.ERROR_MESSAGE);
+        e.printStackTrace();
+    }
+    }//GEN-LAST:event_jButtonSaveActionPerformed
 
     /**
      * @param args the command line arguments
@@ -238,6 +393,7 @@ public class Attendance extends JFrame {
     private javax.swing.JLabel employeeIDLabel;
     private com.toedter.calendar.JDateChooser endDateLabel;
     private javax.swing.JButton jButton1;
+    private javax.swing.JButton jButtonSave;
     private javax.swing.JLabel jLabel1;
     private javax.swing.JLabel jLabel2;
     private javax.swing.JLabel jLabel3;
@@ -249,6 +405,7 @@ public class Attendance extends JFrame {
     private javax.swing.JScrollPane jScrollPane1;
     private javax.swing.JTable jTableAttendance;
     private com.toedter.calendar.JDateChooser startDateLabel;
+    private javax.swing.JButton updateAttendanceButton;
     // End of variables declaration//GEN-END:variables
 
 }

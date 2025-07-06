@@ -1,24 +1,131 @@
-import com.opencsv.CSVReader;
-import java.io.FileReader;
 import java.time.*;
-import java.time.format.*;
 import java.util.*;
+import com.opencsv.CSVReader;
+import com.opencsv.CSVWriter;
+import com.opencsv.exceptions.CsvValidationException;
+import java.io.FileReader;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.time.LocalDate;
+import java.time.LocalTime;
+import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.List;
+import javax.swing.JOptionPane;
+import java.io.File;
 
-/**
- * `AttendanceFileHandler` processes employee attendance records from a CSV.
- * It calculates total hours worked, overtime, late minutes, and absent days.
- */
 public class AttendanceFileHandler {
     private static final String FILE_PATH = "src/data/Attendance Record.csv";
     private static final double STANDARD_WORK_HOURS = 40.0; // Weekly full-time hours.
     private static final double STANDARD_DAILY_HOURS = 8.0;  // Standard hours per workday.
+    
+    public static boolean hasLoggedToday(String empId, String today) {
+    try (CSVReader reader = new CSVReader(new FileReader(FILE_PATH))) {
+        String[] row;
+        reader.readNext(); // Skip header
+        while ((row = reader.readNext()) != null) {
+            if (row.length < 6) continue;
+            if (row[0].trim().equals(empId) && row[3].trim().equals(today)) {
+                return true;
+            }
+        }
+    } catch (Exception e) {
+    }
+    return false;
+}
 
-    /**
-     * Calculates an employee's total **worked hours** and **overtime hours** for a given period.
-     * @param empNo The employee's ID.
-     * @param targetMonthYear The payroll period (e.g., "January 2023").
-     * @return A `double` array: `[totalWorkedHours, overtimeHours]`.
-     */
+    public static void logTimeIn(User user) {
+    String today = LocalDate.now().format(DateTimeFormatter.ofPattern("MM/dd/yyyy"));
+    String timeIn = LocalTime.now().format(DateTimeFormatter.ofPattern("H:mm"));
+
+    if (hasLoggedToday(user.getEmployeeId(), today)) {
+        JOptionPane.showMessageDialog(null, "You already clocked in today.");
+        return;
+    }
+
+    try (CSVWriter writer = new CSVWriter(new FileWriter(FILE_PATH, true))) {
+        String[] newRow = {
+            user.getEmployeeId(),
+            user.getLastName(),
+            user.getFirstName(),
+            today,
+            timeIn,
+            "" 
+        };
+
+        writer.writeNext(newRow);
+        JOptionPane.showMessageDialog(null, "Time In recorded at " + timeIn);
+    } catch (IOException e) {
+        JOptionPane.showMessageDialog(null, "Failed to log Time In: " + e.getMessage());
+    }
+}
+
+    public static void logTimeOut(User user) {
+    String today = LocalDate.now().format(DateTimeFormatter.ofPattern("MM/dd/yyyy"));
+    String timeOut = LocalTime.now().format(DateTimeFormatter.ofPattern("H:mm"));
+
+    try {
+        List<String[]> allRows = new ArrayList<>();
+        boolean updated = false;
+
+        try (CSVReader reader = new CSVReader(new FileReader(FILE_PATH))) {
+            String[] row;
+            boolean isHeader = true;
+
+            while ((row = reader.readNext()) != null) {
+                if (isHeader) {
+                    allRows.add(row);
+                    isHeader = false;
+                    continue;
+                }
+
+                if (!updated &&
+                    row.length >= 6 &&
+                    row[0].trim().equals(user.getEmployeeId().trim()) &&
+                    row[3].trim().equals(today)) {
+
+                    if (row[4].trim().isEmpty()) {
+                        JOptionPane.showMessageDialog(null,
+                            "You haven’t clocked in yet today. Please Time In first.",
+                            "Missing Time In",
+                            JOptionPane.WARNING_MESSAGE);
+                        return;
+                    }
+
+                    if (!row[5].trim().isEmpty()) {
+                        JOptionPane.showMessageDialog(null,
+                            "You already clocked out today.",
+                            "Already Timed Out",
+                            JOptionPane.INFORMATION_MESSAGE);
+                        return;
+                    }
+
+                    row[5] = timeOut;
+                    updated = true;
+                }
+
+                allRows.add(row);
+            }
+        }
+
+        if (!updated) {
+            JOptionPane.showMessageDialog(null,
+                "No valid Time In found for today. Please Time In first.",
+                "Time Out Error",
+                JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+
+        try (CSVWriter writer = new CSVWriter(new FileWriter(FILE_PATH))) {
+            writer.writeAll(allRows);
+        }
+
+        JOptionPane.showMessageDialog(null, "Time Out recorded at " + timeOut);
+    } catch (IOException | CsvValidationException e) {
+        JOptionPane.showMessageDialog(null, "Failed to log Time Out: " + e.getMessage());
+    }
+}
+
     public static double[] computeMonthlyHoursAndOT(int empNo, String targetMonthYear) {
         double totalWorkedHours = 0.0;
         double overtimeHours = 0.0;
@@ -58,7 +165,6 @@ public class AttendanceFileHandler {
                 }
             }
         } catch (Exception e) {
-            System.err.println("Error reading attendance: " + e.getMessage());
         }
 
         return new double[] {
@@ -67,12 +173,6 @@ public class AttendanceFileHandler {
         };
     }
 
-    /**
-     * Computes the number of absent days for an employee.
-     * @param empNo The employee's ID.
-     * @param targetMonthYear The payroll period.
-     * @return The calculated number of absent days.
-     */
     public static int computeAbsentDays(int empNo, String targetMonthYear) {
         double totalWorkedHours = computeMonthlyHoursAndOT(empNo, targetMonthYear)[0];
 
@@ -84,12 +184,6 @@ public class AttendanceFileHandler {
         return (int) Math.ceil(missingHours / STANDARD_DAILY_HOURS);
     }
 
-    /**
-     * Computes total late minutes for an employee.
-     * @param empNo The employee's ID.
-     * @param targetMonthYear The payroll period.
-     * @return The total minutes considered late.
-     */
     public static double computeLateMinutes(int empNo, String targetMonthYear) {
         double totalLateMinutes = 0.0;
 
@@ -125,7 +219,6 @@ public class AttendanceFileHandler {
                 }
             }
         } catch (Exception e) {
-            System.err.println("Error computing late minutes: " + e.getMessage());
         }
 
         return totalLateMinutes;
@@ -178,7 +271,6 @@ public class AttendanceFileHandler {
             break; // ✅ Stop after finding the correct date's entry
         }
     } catch (Exception e) {
-        System.err.println("Error computing attendance minutes: " + e.getMessage());
     }
 
     Map<String, Double> result = new HashMap<>();
@@ -188,9 +280,6 @@ public class AttendanceFileHandler {
     return result;
 }
 
-
-
-    
     public static List<String[]> getAttendanceRecords(String empNo, LocalDate startDate, LocalDate endDate) {
     List<String[]> records = new ArrayList<>();
 
@@ -212,10 +301,86 @@ public class AttendanceFileHandler {
             }
         }
     } catch (Exception e) {
-        System.err.println("Error fetching attendance records: " + e.getMessage());
     }
 
     return records;
 }
+public static List<AttendanceRecord> readAllAttendanceRecords() throws IOException, CsvValidationException {
+        List<AttendanceRecord> records = new ArrayList<>();
+
+        try (CSVReader reader = new CSVReader(new FileReader(FILE_PATH))) {
+            String[] line;
+            boolean skipHeader = true;
+
+            while ((line = reader.readNext()) != null) {
+                if (skipHeader) {
+                    skipHeader = false;
+                    continue;
+                }
+
+                records.add(new AttendanceRecord(
+                    line[0], // Employee #
+                    line[1], // Last Name
+                    line[2], // First Name
+                    line[3], // Date
+                    line[4], // Log In
+                    line[5]  // Log Out
+                ));
+            }
+        }
+
+        return records;
+    }
+
+    // Update records by matching empNo + date
+   public static boolean updateAttendanceRecords(List<AttendanceRecord> updatedRecords)
+        throws IOException, CsvValidationException {
+
+    List<AttendanceRecord> allRecords = readAllAttendanceRecords();
+    int updateCount = 0;
+
+    for (AttendanceRecord updated : updatedRecords) {
+        for (AttendanceRecord existing : allRecords) {
+            if (existing.empNo.equals(updated.empNo) && existing.date.equals(updated.date)) {
+
+                boolean changed = false;
+
+                if (!existing.logIn.equals(updated.logIn)) {
+                    existing.logIn = updated.logIn;
+                    changed = true;
+                }
+
+                if (!existing.logOut.equals(updated.logOut)) {
+                    existing.logOut = updated.logOut;
+                    changed = true;
+                }
+
+                if (changed) {
+                    updateCount++;
+                }
+
+                break;
+            }
+        }
+    }
+
+    File file = new File(FILE_PATH);
+ 
+
+    try (CSVWriter writer = new CSVWriter(new FileWriter(file))) {
+        writer.writeNext(new String[] {
+            "Employee #", "Last Name", "First Name", "Date", "Log In", "Log Out"
+        });
+
+        for (AttendanceRecord r : allRecords) {
+            writer.writeNext(new String[] {
+                r.empNo, r.lastName, r.firstName, r.date, r.logIn, r.logOut
+            });
+        }
+    }
+
+    return true;
+}  
+   
 
 }
