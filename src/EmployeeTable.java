@@ -96,9 +96,11 @@ public class EmployeeTable extends javax.swing.JFrame {
     String role = User.getLoggedInUser().getRole();
     String viewLabel = jLabelEmpInfo.getText().trim();
 
-    // Restrict SUPPORT in all views, and ADMIN only in Payslip mode
+    // Restrict SUPPORT always, and ADMIN only in Payslip & Attendance modes
     if ("SUPPORT".equalsIgnoreCase(role) || 
-        ("ADMIN".equalsIgnoreCase(role) && "Employee Payslip".equalsIgnoreCase(viewLabel))) {
+        ("ADMIN".equalsIgnoreCase(role) && 
+         ("Employee Payslip".equalsIgnoreCase(viewLabel) ||
+          "Employee Attendance".equalsIgnoreCase(viewLabel)))) {
 
         Dimension originalSize = new Dimension(120, 35);
 
@@ -133,6 +135,7 @@ public class EmployeeTable extends javax.swing.JFrame {
         }
     }
 }
+
 
 
 
