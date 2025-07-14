@@ -24,7 +24,6 @@ public class EmployeeTable extends javax.swing.JFrame {
     public EmployeeTable() {
         instance = this;
         initComponents();
-        applyRoleRestrictions();
 
         setDefaultCloseOperation(javax.swing.WindowConstants.DISPOSE_ON_CLOSE);
 
@@ -46,10 +45,9 @@ public class EmployeeTable extends javax.swing.JFrame {
     public EmployeeTable(String supervisorId, String labelText) {
     instance = this;
     initComponents();
-
-    jLabelEmpInfo.setText(labelText);     // ✅ Display view mode label
-    applyRoleRestrictions();              // 🔐 Role-based button disabling & layout fixes
-
+    jLabelEmpInfo.setText(labelText);   
+    applyRoleRestrictions();           
+    
     // 🔘 Set jButtonView label based on view mode
     if ("Employee Attendance".equalsIgnoreCase(labelText)) {
         jButtonView.setText("View Attendance");
@@ -96,9 +94,13 @@ public class EmployeeTable extends javax.swing.JFrame {
    
     private void applyRoleRestrictions() {
     String role = User.getLoggedInUser().getRole();
+    String viewLabel = jLabelEmpInfo.getText().trim();
 
-    if ("SUPPORT".equalsIgnoreCase(role) || "ADMIN".equalsIgnoreCase(role)) {
-        Dimension originalSize = new Dimension(120, 35); 
+    // Restrict SUPPORT in all views, and ADMIN only in Payslip mode
+    if ("SUPPORT".equalsIgnoreCase(role) || 
+        ("ADMIN".equalsIgnoreCase(role) && "Employee Payslip".equalsIgnoreCase(viewLabel))) {
+
+        Dimension originalSize = new Dimension(120, 35);
 
         if (jButtonAdd != null) {
             jButtonAdd.setText("");
@@ -131,6 +133,7 @@ public class EmployeeTable extends javax.swing.JFrame {
         }
     }
 }
+
 
 
 
