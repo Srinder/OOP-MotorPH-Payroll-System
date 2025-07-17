@@ -7,6 +7,12 @@ public class User {
     private String role;
 
     private static User loggedInUser;
+    private String email;
+
+    // Add this if it's missing
+    public String getEmail() {
+        return email;
+    }
 
     public User(String employeeId, String firstName, String lastName,
                 String username, String password, String role) {
@@ -34,4 +40,5 @@ public class User {
     public String getUsername()    { return username; }
     public String getPassword()    { return password; }
     public String getRole()        { return role; }
+    
 }

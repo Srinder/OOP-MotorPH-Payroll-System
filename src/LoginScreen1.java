@@ -11,15 +11,13 @@
 import javax.swing.JOptionPane;
 import javax.swing.JPasswordField;
 
-
 public class LoginScreen1 extends javax.swing.JFrame {
     
-    private final String DEFAULT_USERNAME = "admin";
-    private final String DEFAULT_PASSWORD = "12345";
     private int failedAttempts = 0;
     private long blockUntilTime = 0;
 
-
+   
+    private static final String TWO_FACTOR_DEMO_USER_ID = "10001"; // <--- USER'S ACTUAL EmpNum from CSV
 
     /**
      * Creates new form LoginScreen1
@@ -48,7 +46,6 @@ public class LoginScreen1 extends javax.swing.JFrame {
         jPasswordField = new javax.swing.JPasswordField();
         jLabelLogin2 = new javax.swing.JLabel();
         jButtonReset = new javax.swing.JButton();
-        jLabel1 = new javax.swing.JLabel();
 
         setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
         getContentPane().setLayout(new org.netbeans.lib.awtextra.AbsoluteLayout());
@@ -109,51 +106,188 @@ public class LoginScreen1 extends javax.swing.JFrame {
         });
         jPanel2.add(jButtonReset, new org.netbeans.lib.awtextra.AbsoluteConstraints(260, 400, 120, 32));
 
-        jLabel1.setFont(new java.awt.Font("Segoe UI", 2, 8)); // NOI18N
-        jLabel1.setHorizontalAlignment(javax.swing.SwingConstants.TRAILING);
-        jLabel1.setText("CP2 H1102 SY24-25 Team Petix - C.Oreta, S.Singh, R.Sisles, J.Singh, D.Sumatra");
-        jPanel2.add(jLabel1, new org.netbeans.lib.awtextra.AbsoluteConstraints(280, 590, 300, -1));
-
         getContentPane().add(jPanel2, new org.netbeans.lib.awtextra.AbsoluteConstraints(413, 0, 590, 600));
 
         pack();
     }// </editor-fold>//GEN-END:initComponents
 
     private void jButtonLoginActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButtonLoginActionPerformed
-    long currentTime = System.currentTimeMillis();
+        long currentTime = System.currentTimeMillis();
 
-    // ⏳ Check if user is currently blocked
-    if (currentTime < blockUntilTime) {
-        long secondsRemaining = (blockUntilTime - currentTime) / 1000;
-        JOptionPane.showMessageDialog(this,
-            "Too many incorrect attempts.\nYour account is temporarily blocked for " + secondsRemaining + " seconds.\n" +
-            "Please wait or reset your password.",
-            "Login Blocked",
-            JOptionPane.WARNING_MESSAGE);
-        return;
-    }
+        // ⏳ Check if user is currently blocked
+        if (currentTime < blockUntilTime) {
+            long secondsRemaining = (blockUntilTime - currentTime) / 1000;
+            JOptionPane.showMessageDialog(this,
+                "Too many incorrect attempts.\nYour account is temporarily blocked for " + secondsRemaining + " seconds.\n" +
+                "Please wait or reset your password.",
+                "Login Blocked",
+                JOptionPane.WARNING_MESSAGE);
+            return;
+        }
 
-    String username = jTextFieldUsername.getText().trim();
-    String password = jPasswordField.getText().trim();
+        String username = jTextFieldUsername.getText().trim();
+        String password = jPasswordField.getText().trim();
 
-    User user = UserDatabase.authenticate(username, password);
+        // 1. Authenticate username and password using the updated UserDatabase
+        // This will now return a User object with email and employeeId
+        User user = UserDatabase.authenticate(username, password);
 
-    if (user != null) {
-        // 🔐 Successful login
-        User.setLoggedInUser(user);
-        failedAttempts = 0;
-        blockUntilTime = 0;
+        if (user != null) {
+            // Password is correct. Now, conceptually check 2FA base on the given dummy emails in the CSV
+            boolean is2FAEnabledForThisUser = user.getEmployeeId().equals(TWO_FACTOR_DEMO_USER_ID);
+
+            if (is2FAEnabledForThisUser) {
+                // --- START DEMO 2FA PLACEHOLDER LOGIC ---
+
+                // 1. Show the "Code Sent" message using the user's email from the User object
+                String userEmail = user.getEmail(); // Get the dummy email from the User object
+                JOptionPane.showMessageDialog(this,
+                    "A 6-digit verification code has been conceptually sent to your registered email: " + maskEmail(userEmail) + ".\n" +
+                    "For this presentation, you can enter any random 6-digit number.",
+                    "Two-Factor Authentication Required (DEMO)",
+                    JOptionPane.INFORMATION_MESSAGE);
+                
+
+                // 2. Prompt for OTP input
+                String enteredOTP = JOptionPane.showInputDialog(this, "Enter the 6-digit code (any number for demo):");
+                
+
+                // 3. DEMO OTP Verification: Accept ANY non-empty input
+                if (enteredOTP != null && !enteredOTP.trim().isEmpty()) {
+                    JOptionPane.showMessageDialog(this, "OTP accepted (DEMO). Login successful!");
+                    // Proceed with actual login actions
+                    proceedWithSuccessfulLogin(user); // Call the helper method
+                } else {
+                    // User canceled the OTP input dialog or entered nothing
+                    JOptionPane.showMessageDialog(this, "OTP not entered. Login failed.", "2FA Demo Canceled", JOptionPane.ERROR_MESSAGE);
+                    
+                }
+
+                // --- END DEMO 2FA PLACEHOLDER LOGIC ---
+
+            } else {
+                // No 2FA conceptually enabled for this user, proceed with regular successful login
+                proceedWithSuccessfulLogin(user);
+            }
+        } else {
+            // ❌ Incorrect login (existing code for password failure)
+            failedAttempts++;
+
+            if (failedAttempts >= 3) {
+                blockUntilTime = System.currentTimeMillis() + (5 * 60 * 1000); // 5-minute lockout (adjust time as needed)
+                JOptionPane.showMessageDialog(this,
+                    "Invalid login 3 times.\nAccount is locked for 5 minutes.\n" +
+                    "Consider resetting your password.",
+                    "Account Temporarily Blocked",
+                    JOptionPane.ERROR_MESSAGE);
+            } else {
+                JOptionPane.showMessageDialog(this,
+                    "Invalid username or password.\nAttempt " + failedAttempts + " of 3.",
+                    "Login Failed",
+                    JOptionPane.WARNING_MESSAGE);
+            }
+
+            // Clear fields on login failure for next attempt
+            jTextFieldUsername.setText("");
+            jPasswordField.setText("");
+        }
+    }//GEN-LAST:event_jButtonLoginActionPerformed
+
+    private void jPasswordFieldActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jPasswordFieldActionPerformed
+        // This method is often generated by NetBeans but might not need specific code for password field 'Enter' key.
+        // If you want 'Enter' on the password field to trigger login, you could call jButtonLoginActionPerformed(evt) here.
+    }//GEN-LAST:event_jPasswordFieldActionPerformed
+
+    private void jButtonResetActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButtonResetActionPerformed
+        // Your existing reset password logic remains unchanged
+        String empId = JOptionPane.showInputDialog(this, "Enter your Employee ID:");
+        if (empId == null || empId.trim().isEmpty()) return;
+
+        // Use UserDatabase to get security question
+        String question = UserDatabase.getSecurityQuestion(empId.trim());
+        if (question == null) {
+            JOptionPane.showMessageDialog(this, "Employee ID not found.", "Error", JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+
+        String answer = JOptionPane.showInputDialog(this, question);
+        if (answer == null || answer.trim().isEmpty()) return;
+
+        // Use UserDatabase to verify security answer
+        boolean isCorrect = UserDatabase.verifySecurityAnswer(empId.trim(), answer.trim());
+        if (!isCorrect) {
+            JOptionPane.showMessageDialog(this, "Incorrect answer. Please try again.", "Security Check Failed", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+
+        String newPassword = null;
+        boolean validPassword = false;
+
+        // 🔁 Repeat until user enters a valid password or cancels
+        while (!validPassword) {
+            JPasswordField passwordField = new JPasswordField();
+            passwordField.setEchoChar('*'); // Hide characters being typed
+
+            int confirm = JOptionPane.showConfirmDialog(this, passwordField, "Enter your new password:", JOptionPane.OK_CANCEL_OPTION);
+
+            if (confirm != JOptionPane.OK_OPTION) {
+                JOptionPane.showMessageDialog(this, "Password reset canceled.");
+                return;
+            }
+
+            newPassword = new String(passwordField.getPassword()).trim();
+
+            // Password validation rules
+            boolean isAlphanumeric = newPassword.matches("^[a-zA-Z0-9]+$"); // Only letters and numbers
+            boolean hasCapital = newPassword.matches(".*[A-Z].*"); // At least one uppercase letter
+            boolean hasNumber = newPassword.matches(".*\\d.*"); // At least one digit
+
+            if (newPassword.isEmpty() || !isAlphanumeric || !hasCapital || !hasNumber) {
+                JOptionPane.showMessageDialog(this,
+                    "Password must meet the following requirements:\n" +
+                    "- Only letters and numbers (no symbols)\n" +
+                    "- At least one uppercase letter\n" +
+                    "- At least one number",
+                    "Invalid Password Format",
+                    JOptionPane.ERROR_MESSAGE);
+            } else {
+                validPassword = true;
+            }
+        }
+
+        // Use UserDatabase to update password
+        boolean updated = UserDatabase.updatePassword(empId.trim(), newPassword);
+        if (updated) {
+            JOptionPane.showMessageDialog(this, "Password reset successfully.");
+        } else {
+            JOptionPane.showMessageDialog(this, "Failed to update password.", "Update Failed", JOptionPane.ERROR_MESSAGE);
+        }
+    }//GEN-LAST:event_jButtonResetActionPerformed
+
+    // --- NEW HELPER METHODS ---
+
+    /**
+     * Encapsulates the actions for a successful login, whether 2FA was used or not.
+     * This method will open the MainMenu and dispose of the LoginScreen.
+     * @param user The authenticated User object.
+     */
+    private void proceedWithSuccessfulLogin(User user) {
+        User.setLoggedInUser(user); // Set the globally logged-in user
+        failedAttempts = 0; // Reset failed attempts on successful login
+        blockUntilTime = 0; // Clear any active lockout
 
         JOptionPane.showMessageDialog(this, "Welcome, " + user.getFirstName() + "!");
+        
 
-        MainMenu main = new MainMenu(user);
+        // Open the MainMenu and center it
+        MainMenu main = new MainMenu(user); // Assuming MainMenu constructor takes a User object
         main.setVisible(true);
         main.setLocationRelativeTo(null);
 
-        // Optional role-based actions (kept intact)
+        // Optional role-based actions (from your original code)
         switch (user.getRole().toUpperCase()) {
             case "EMPLOYEE":
-                // new Attendance(user.getEmployeeId()).setVisible(true);
+                // new Attendance(user.getEmployeeId()).setVisible(true); // Example comment
                 break;
             case "HR":
                 // optional: HR interface
@@ -166,94 +300,22 @@ public class LoginScreen1 extends javax.swing.JFrame {
                 break;
         }
 
-        this.dispose();
-    } else {
-        // ❌ Incorrect login
-        failedAttempts++;
-
-        if (failedAttempts >= 3) {
-            blockUntilTime = System.currentTimeMillis() + (5 * 60 * 1000); // 5-minute lockout
-            JOptionPane.showMessageDialog(this,
-                "Invalid login 3 times.\nAccount is locked for 5 minutes.\n" +
-                "Consider resetting your password.",
-                "Account Temporarily Blocked",
-                JOptionPane.ERROR_MESSAGE);
-        } else {
-            JOptionPane.showMessageDialog(this,
-                "Invalid username or password.\nAttempt " + failedAttempts + " of 3.",
-                "Login Failed",
-                JOptionPane.WARNING_MESSAGE);
-        }
-
-        jTextFieldUsername.setText("");
-        jPasswordField.setText("");
-    }
-    }//GEN-LAST:event_jButtonLoginActionPerformed
-
-    private void jPasswordFieldActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jPasswordFieldActionPerformed
-        // TODO add your handling code here:
-    }//GEN-LAST:event_jPasswordFieldActionPerformed
-
-    private void jButtonResetActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButtonResetActionPerformed
-    String empId = JOptionPane.showInputDialog(this, "Enter your Employee ID:");
-    if (empId == null || empId.trim().isEmpty()) return;
-
-    String question = UserDatabase.getSecurityQuestion(empId.trim());
-    if (question == null) {
-        JOptionPane.showMessageDialog(this, "Employee ID not found.", "Error", JOptionPane.ERROR_MESSAGE);
-        return;
+        this.dispose(); // Close the current login screen
     }
 
-    String answer = JOptionPane.showInputDialog(this, question);
-    if (answer == null || answer.trim().isEmpty()) return;
-
-    boolean isCorrect = UserDatabase.verifySecurityAnswer(empId.trim(), answer.trim());
-    if (!isCorrect) {
-        JOptionPane.showMessageDialog(this, "Incorrect answer. Please try again.", "Security Check Failed", JOptionPane.WARNING_MESSAGE);
-        return;
+    /**
+     * Utility method to mask an email address for display.
+     * E.g., "john.doe@example.com" becomes "jo*****@example.com"
+     * @param email The email address to mask.
+     * @return The masked email string.
+     */
+    private String maskEmail(String email) {
+        if (email == null || email.indexOf('@') <= 1) return email; // Handle null, empty, or very short emails
+        int atIndex = email.indexOf('@');
+        String prefix = email.substring(0, Math.min(atIndex, 2)); // Show first 2 characters before '@'
+        String domain = email.substring(atIndex); // Keep the domain part as is
+        return prefix + "*****" + domain;
     }
-
-    String newPassword = null;
-    boolean validPassword = false;
-
-    // 🔁 Repeat until user enters a valid password or cancels
-    while (!validPassword) {
-        JPasswordField passwordField = new JPasswordField();
-        passwordField.setEchoChar('*');
-
-        int confirm = JOptionPane.showConfirmDialog(this, passwordField, "Enter your new password:", JOptionPane.OK_CANCEL_OPTION);
-
-        if (confirm != JOptionPane.OK_OPTION) {
-            JOptionPane.showMessageDialog(this, "Password reset canceled.");
-            return;
-        }
-
-        newPassword = new String(passwordField.getPassword()).trim();
-
-        boolean isAlphanumeric = newPassword.matches("^[a-zA-Z0-9]+$");
-        boolean hasCapital = newPassword.matches(".*[A-Z].*");
-        boolean hasNumber = newPassword.matches(".*\\d.*");
-
-        if (newPassword.isEmpty() || !isAlphanumeric || !hasCapital || !hasNumber) {
-            JOptionPane.showMessageDialog(this,
-                "Password must meet the following requirements:\n" +
-                "- Only letters and numbers (no symbols)\n" +
-                "- At least one uppercase letter\n" +
-                "- At least one number",
-                "Invalid Password Format",
-                JOptionPane.ERROR_MESSAGE);
-        } else {
-            validPassword = true;
-        }
-    }
-
-    boolean updated = UserDatabase.updatePassword(empId.trim(), newPassword);
-    if (updated) {
-        JOptionPane.showMessageDialog(this, "Password reset successfully.");
-    } else {
-        JOptionPane.showMessageDialog(this, "Failed to update password.", "Update Failed", JOptionPane.ERROR_MESSAGE);
-    }
-    }//GEN-LAST:event_jButtonResetActionPerformed
 
     /**
      * @param args the command line arguments
@@ -293,7 +355,6 @@ public class LoginScreen1 extends javax.swing.JFrame {
     // Variables declaration - do not modify//GEN-BEGIN:variables
     private javax.swing.JButton jButtonLogin;
     private javax.swing.JButton jButtonReset;
-    private javax.swing.JLabel jLabel1;
     private javax.swing.JLabel jLabelLogin2;
     private javax.swing.JLabel jLabelPassword;
     private javax.swing.JLabel jLabelUsername;
