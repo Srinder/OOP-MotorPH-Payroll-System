@@ -16,9 +16,6 @@ public class LoginScreen1 extends javax.swing.JFrame {
     private int failedAttempts = 0;
     private long blockUntilTime = 0;
 
-   
-    private static final String TWO_FACTOR_DEMO_USER_ID = "10001"; // <--- USER'S ACTUAL EmpNum from CSV
-
     /**
      * Creates new form LoginScreen1
      */
@@ -134,7 +131,7 @@ public class LoginScreen1 extends javax.swing.JFrame {
 
         if (user != null) {
             // Password is correct. Now, conceptually check 2FA base on the given dummy emails in the CSV
-            boolean is2FAEnabledForThisUser = user.getEmployeeId().equals(TWO_FACTOR_DEMO_USER_ID);
+            boolean is2FAEnabledForThisUser = true;
 
             if (is2FAEnabledForThisUser) {
                 // --- START DEMO 2FA PLACEHOLDER LOGIC ---
