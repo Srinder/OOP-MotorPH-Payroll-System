@@ -105,6 +105,7 @@ public class Attendance extends JFrame {
         employeeIDLabel = new javax.swing.JLabel();
         updateAttendanceButton = new javax.swing.JButton();
         jButtonSave = new javax.swing.JButton();
+        jLabel7 = new javax.swing.JLabel();
 
         jLabel2.setText("jLabel2");
 
@@ -145,7 +146,7 @@ public class Attendance extends JFrame {
                 jButton1ActionPerformed(evt);
             }
         });
-        jPanel1.add(jButton1, new org.netbeans.lib.awtextra.AbsoluteConstraints(700, 600, 85, -1));
+        jPanel1.add(jButton1, new org.netbeans.lib.awtextra.AbsoluteConstraints(700, 590, 85, -1));
 
         jLabel3.setFont(new java.awt.Font("Segoe UI", 1, 18)); // NOI18N
         jLabel3.setForeground(new java.awt.Color(255, 255, 255));
@@ -195,7 +196,13 @@ public class Attendance extends JFrame {
                 jButtonSaveActionPerformed(evt);
             }
         });
-        jPanel1.add(jButtonSave, new org.netbeans.lib.awtextra.AbsoluteConstraints(600, 600, 85, -1));
+        jPanel1.add(jButtonSave, new org.netbeans.lib.awtextra.AbsoluteConstraints(600, 590, 85, -1));
+
+        jLabel7.setFont(new java.awt.Font("Segoe UI", 2, 8)); // NOI18N
+        jLabel7.setForeground(new java.awt.Color(255, 255, 255));
+        jLabel7.setHorizontalAlignment(javax.swing.SwingConstants.TRAILING);
+        jLabel7.setText("CP2 H1102 SY24-25 Team Petix - C.Oreta, S.Singh, R.Sisles, J.Singh, D.Sumatra");
+        jPanel1.add(jLabel7, new org.netbeans.lib.awtextra.AbsoluteConstraints(450, 620, 330, -1));
 
         javax.swing.GroupLayout layout = new javax.swing.GroupLayout(getContentPane());
         getContentPane().setLayout(layout);
@@ -400,6 +407,7 @@ public class Attendance extends JFrame {
     private javax.swing.JLabel jLabel4;
     private javax.swing.JLabel jLabel5;
     private javax.swing.JLabel jLabel6;
+    private javax.swing.JLabel jLabel7;
     private javax.swing.JLabel jLblEmpAtt;
     private javax.swing.JPanel jPanel1;
     private javax.swing.JScrollPane jScrollPane1;

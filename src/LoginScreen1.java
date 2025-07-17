@@ -48,6 +48,7 @@ public class LoginScreen1 extends javax.swing.JFrame {
         jPasswordField = new javax.swing.JPasswordField();
         jLabelLogin2 = new javax.swing.JLabel();
         jButtonReset = new javax.swing.JButton();
+        jLabel1 = new javax.swing.JLabel();
 
         setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
         getContentPane().setLayout(new org.netbeans.lib.awtextra.AbsoluteLayout());
@@ -107,6 +108,11 @@ public class LoginScreen1 extends javax.swing.JFrame {
             }
         });
         jPanel2.add(jButtonReset, new org.netbeans.lib.awtextra.AbsoluteConstraints(260, 400, 120, 32));
+
+        jLabel1.setFont(new java.awt.Font("Segoe UI", 2, 8)); // NOI18N
+        jLabel1.setHorizontalAlignment(javax.swing.SwingConstants.TRAILING);
+        jLabel1.setText("CP2 H1102 SY24-25 Team Petix - C.Oreta, S.Singh, R.Sisles, J.Singh, D.Sumatra");
+        jPanel2.add(jLabel1, new org.netbeans.lib.awtextra.AbsoluteConstraints(280, 590, 300, -1));
 
         getContentPane().add(jPanel2, new org.netbeans.lib.awtextra.AbsoluteConstraints(413, 0, 590, 600));
 
@@ -287,6 +293,7 @@ public class LoginScreen1 extends javax.swing.JFrame {
     // Variables declaration - do not modify//GEN-BEGIN:variables
     private javax.swing.JButton jButtonLogin;
     private javax.swing.JButton jButtonReset;
+    private javax.swing.JLabel jLabel1;
     private javax.swing.JLabel jLabelLogin2;
     private javax.swing.JLabel jLabelPassword;
     private javax.swing.JLabel jLabelUsername;

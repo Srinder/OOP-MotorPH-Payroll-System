@@ -211,6 +211,7 @@ public class EditEmpInfo extends javax.swing.JFrame {
         PhoneNum = new javax.swing.JTextField();
         Birthday = new javax.swing.JTextField();
         Address = new javax.swing.JTextField();
+        jLabel1 = new javax.swing.JLabel();
 
         headerLogo.setIcon(new javax.swing.ImageIcon(getClass().getResource("/logoHeader.png"))); // NOI18N
 
@@ -490,6 +491,11 @@ public class EditEmpInfo extends javax.swing.JFrame {
         });
         jPanel3.add(Address, new org.netbeans.lib.awtextra.AbsoluteConstraints(174, 377, 394, -1));
 
+        jLabel1.setFont(new java.awt.Font("Segoe UI", 2, 8)); // NOI18N
+        jLabel1.setHorizontalAlignment(javax.swing.SwingConstants.TRAILING);
+        jLabel1.setText("CP2 H1102 SY24-25 Team Petix - C.Oreta, S.Singh, R.Sisles, J.Singh, D.Sumatra");
+        jPanel3.add(jLabel1, new org.netbeans.lib.awtextra.AbsoluteConstraints(330, 570, 340, -1));
+
         javax.swing.GroupLayout layout = new javax.swing.GroupLayout(getContentPane());
         getContentPane().setLayout(layout);
         layout.setHorizontalGroup(
@@ -698,6 +704,7 @@ private double parseDouble(String value, double currentValue) {
     private javax.swing.JLabel TINname;
     private javax.swing.JLabel headerLogo;
     private javax.swing.JButton jButton2;
+    private javax.swing.JLabel jLabel1;
     private javax.swing.JLabel jLabel10;
     private javax.swing.JLabel jLabel11;
     private javax.swing.JLabel jLabel14;
