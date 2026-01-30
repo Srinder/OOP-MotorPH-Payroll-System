@@ -11,6 +11,7 @@ import com.itextpdf.text.pdf.*;
 import javax.swing.JFileChooser;
 import model.User;
 import repository.AttendanceRepository;
+import service.ISalaryService;
 
 
 /**
@@ -21,7 +22,7 @@ import repository.AttendanceRepository;
 
 public class Payslip extends javax.swing.JFrame {
         private String empNo;
-        private final SalaryService salaryService = new SalaryService();
+        private final ISalaryService salaryService = new SalaryService();
 
     public Payslip(String empNo){
         initComponents();
@@ -587,7 +588,7 @@ public class Payslip extends javax.swing.JFrame {
     }
     
     private void updateSalaryDisplay(Employee emp, double hours, double ot) {
-    // 1. Get the math from your service
+    // 1. Get the math from service
     double gross = salaryService.calculateGrossIncome(emp, hours, ot);
     double monthlyEquivalent = gross * 2; 
 

@@ -33,6 +33,7 @@ public class User {
 
     public static Employee authenticate(String enteredUser, String enteredPass) {
         String path = "data/employee_logins.csv"; 
+       
         
         try (BufferedReader br = new BufferedReader(new FileReader(path))) {
             String line;
@@ -49,6 +50,7 @@ public class User {
                     String Password = data[6];
                     String Access = data[9].trim().toUpperCase(); 
                     String emailAddress = data[10];
+                    
 
                     if (Username.equals(enteredUser) && Password.equals(enteredPass)) {
                         int empIdInt = Integer.parseInt(EmpNum); // Fixed: changed 'id' to 'EmpNum'

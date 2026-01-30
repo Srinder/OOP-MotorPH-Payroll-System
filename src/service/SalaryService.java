@@ -3,13 +3,12 @@ package service;
 import model.Employee;
 import repository.SSSRepository;
 
-public class SalaryService {
+public class SalaryService implements ISalaryService{
     
     private final SSSRepository sssRepository = new SSSRepository();
 
-    /**
-     * MASTER METHOD: This is what your GUI will call for the final net pay.
-     */
+    // MASTER METHOD: This is what our GUI will call for the final net pay.
+    @Override
     public double calculateSemiMonthlyNet(Employee emp, double hours, double otHours) {
         double semiMonthlyGross = calculateGrossIncome(emp, hours, otHours);
         
@@ -31,29 +30,27 @@ public class SalaryService {
         return taxableIncome - tax + semiMonthlyAllowances;
     }
 
-    /**
-     * Calculates Gross Income based on hourly rate.
-     */
+    //Calculates Gross Income based on hourly rate.
+     @Override
     public double calculateGrossIncome(Employee employee, double workedHours, double overtimeHours) {
         double regularPay = workedHours * employee.getHourlyRate();
         double overtimePay = overtimeHours * employee.getHourlyRate();
         return regularPay + overtimePay;
     }
 
-    /**
-     * FIX: Added for Payslip.java (Line 78)
-     */
+    // Added for Payslip.java 
+    @Override
     public double calculateSSS(double monthlyGross) {
         return sssRepository.getPremiumByIncome(monthlyGross);
     }
 
-    /**
-     * FIX: Added for Payslip.java (Line 84)
-     */
+    //Added for Payslip.java (Line 84)
+    @Override
     public double calculateWithholdingTax(double taxableIncome) {
         return calculateSemiMonthlyWithholdingTax(taxableIncome);
     }
-
+    
+    @Override
     public double calculatePhilHealth(double monthlyGross) {
         double totalPremium;
         if (monthlyGross <= 10000) totalPremium = 300;
@@ -62,12 +59,14 @@ public class SalaryService {
         
         return totalPremium; 
     }
-
+    
+    @Override
     public double calculatePagIbig(double monthlyGross) {
         double premium = (monthlyGross <= 1500) ? (monthlyGross * 0.01) : (monthlyGross * 0.02);
         return Math.min(premium, 100);
     }
-
+    
+    @Override
     public double calculateSemiMonthlyWithholdingTax(double taxableIncome) {
         if (taxableIncome <= 10417) return 0;
         if (taxableIncome <= 16666) return (taxableIncome - 10417) * 0.20;

@@ -19,10 +19,14 @@ import model.HRStaff;
 import model.FinanceStaff;
 import model.ITStaff;
 import model.RegularEmployee;
+import service.AttendanceService;
+import service.IAttendanceService;
 
 
 public class Attendance extends JFrame {
+    
     private String empNo;   
+    private IAttendanceService attendanceService = new AttendanceService();
 
     public Attendance(String empNo) {
     this.empNo = empNo;
@@ -266,7 +270,7 @@ public class Attendance extends JFrame {
             String dateStr = (String) model.getValueAt(row, 0); // Date column
 
             if (dateStr != null && !dateStr.trim().isEmpty()) {
-                Map<String, Double> attendanceMinutes = new AttendanceRepository().computeDailyAttendanceMinutes(Integer.parseInt(empNo), dateStr);
+                Map<String, Double> attendanceMinutes = attendanceService.computeDailyAttendanceMinutes(Integer.parseInt(empNo), dateStr);
 
                 model.setValueAt(attendanceMinutes.get("Late"), row, 3);      // Late = Column 3
                 model.setValueAt(attendanceMinutes.get("Overtime"), row, 4);  // Overtime = Column 4

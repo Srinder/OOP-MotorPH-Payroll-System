@@ -9,13 +9,15 @@
  */
 package service;
 
-import model.AttendanceRecord;
-import repository.AttendanceRepository;
 import java.time.*;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.Map;
+import model.AttendanceRecord;
+import repository.AttendanceRepository;
 
-public class AttendanceService {
+public class AttendanceService implements IAttendanceService{
+    
     private final AttendanceRepository attendanceRepo = new AttendanceRepository();
     private final DateTimeFormatter timeFmt = DateTimeFormatter.ofPattern("H:mm");
     private final DateTimeFormatter dateFmt = DateTimeFormatter.ofPattern("MM/dd/yyyy");
@@ -24,11 +26,16 @@ public class AttendanceService {
     private final LocalTime SHIFT_START = LocalTime.of(8, 0);
     private final LocalTime GRACE_PERIOD = SHIFT_START.plusMinutes(10); // 8:10 AM
     private final LocalTime SHIFT_END = LocalTime.of(17, 0);
+    
+    @Override
+    public Map<String, Double> computeDailyAttendanceMinutes(int empId, String dateStr) {
+    // This calls the repository to do the actual data work
+    return attendanceRepo.computeDailyAttendanceMinutes(empId, dateStr);
+}
 
-    /**
-     * Calculates late minutes for a specific record.
-     * Rule: If arrival is after 8:10 AM, late is calculated from 8:00 AM.
-     */
+    //Calculates late minutes for a specific record.
+    //Rule: If arrival is after 8:10 AM, late is calculated from 8:00 AM.
+     @Override
     public double calculateLateMinutes(AttendanceRecord record) {
         LocalTime logIn = LocalTime.parse(record.getLogIn(), timeFmt);
         
@@ -38,10 +45,9 @@ public class AttendanceService {
         return 0.0;
     }
 
-    /**
-     * Calculates overtime minutes for a specific record.
-     * Rule: Any time worked after 5:00 PM.
-     */
+    //Calculates overtime minutes for a specific record.
+    //Rule: Any time worked after 5:00 PM.
+    @Override
     public double calculateOvertimeMinutes(AttendanceRecord record) {
         if (record.getLogOut() == null || record.getLogOut().isEmpty()) return 0.0;
         
@@ -52,10 +58,9 @@ public class AttendanceService {
         return 0.0;
     }
 
-    /**
-     * Calculates total hours worked in a month for Payroll.
-     * Subtracts 1 hour for lunch if worked more than 4 hours.
-     */
+    //Calculates total hours worked in a month for Payroll.
+     //Subtracts 1 hour for lunch if worked more than 4 hours.
+    @Override
     public double calculateMonthlyNetHours(String empId, String targetMonthYear) {
         List<AttendanceRecord> records = attendanceRepo.findByEmployeeId(empId);
         double totalHours = 0.0;
