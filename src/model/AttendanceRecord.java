@@ -13,10 +13,7 @@ public class AttendanceRecord {
     private String logIn;
     private String logOut;
 
-    /**
-     * Constructor to initialize an attendance record.
-     * Ensure the order matches your CSV: ID, Last, First, Date, In, Out.
-     */
+    
     public AttendanceRecord(String empNo, String lastName, String firstName,
                             String date, String logIn, String logOut) {
         this.empNo = empNo;

@@ -28,14 +28,14 @@ public class AttendanceRepository extends BaseRepository<AttendanceRecord> {
         }
     }
 
-    // ERROR FIX: findByEmployeeId (for AttendanceService.java)
+    
     public List<AttendanceRecord> findByEmployeeId(String empId) {
         return findAll().stream()
                 .filter(r -> r.getEmpNo().trim().equals(empId.trim()))
                 .collect(Collectors.toList());
     }
 
-    // ERROR FIX: getTotalHoursInRange (for Payslip.java)
+    
     public double getTotalHoursInRange(String empId, String startDate, String endDate) {
         List<AttendanceRecord> records = findByEmployeeId(empId);
         double totalHours = 0.0;
@@ -54,7 +54,7 @@ public class AttendanceRepository extends BaseRepository<AttendanceRecord> {
         return totalHours;
     }
 
-    // ERROR FIX: computeDailyAttendanceMinutes (for Attendance.java)
+    
     public Map<String, Double> computeDailyAttendanceMinutes(int empId, String date) {
         Map<String, Double> metrics = new HashMap<>();
         boolean exists = hasLoggedToday(String.valueOf(empId), date);
@@ -63,7 +63,7 @@ public class AttendanceRepository extends BaseRepository<AttendanceRecord> {
         return metrics;
     }
 
-    // ERROR FIX: Handle both Single Record and List updates
+    
     public boolean update(List<AttendanceRecord> updatedRecords) {
         try {
             List<AttendanceRecord> allRecords = findAll();

@@ -51,7 +51,7 @@ public class PayslipData {
         return tax;
     }
 
-    // Getters for all fields (e.g., getGross(), getNet(), etc.)
+    // Getters
     public double getAllowances() {
         return allowances;
     }

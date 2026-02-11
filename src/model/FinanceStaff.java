@@ -34,7 +34,7 @@ public class FinanceStaff extends Employee {
 
     @Override
     public double calculateNetPay(double grossIncome, double totalDeductions) {
-        // Finance might have a different logic for net pay or adjustments
+        
         return grossIncome - totalDeductions + getTotalAllowances();
     }
 }
