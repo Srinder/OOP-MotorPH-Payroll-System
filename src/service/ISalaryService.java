@@ -11,7 +11,7 @@ import model.Employee;
 
 public interface ISalaryService {
     
-    double calculateSemiMonthlyNet(Employee emp, double hours, double otHours);
+    double calculateSemiMonthlyNet(Employee emp, double hours, double overtimeHours);
     double calculateGrossIncome(Employee employee, double workedHours, double overtimeHours);
     double calculateSSS(double monthlyGross);
     double calculateWithholdingTax(double taxableIncome);

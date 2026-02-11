@@ -538,13 +538,20 @@ public class Payslip extends javax.swing.JFrame {
     // 5. Get Attendance Hours (Using the formatted strings)
     AttendanceRepository attendanceRepo = new AttendanceRepository();
     double actualHours = attendanceRepo.getTotalHoursInRange(this.empNo, startStr, endStr);
-
+    
+    if (actualHours <= 0) {
+    javax.swing.JOptionPane.showMessageDialog(this, "No attendance records found for this period. Net Pay is ₱0.00.");
+    
+    updateSalaryDisplay(emp, 0.0, 0.0); 
+    return;
+    }
     // 6. UI Update Sequence
     // This fills static info (SSS, TIN, etc.)
-    fillEmployeeDetails(this.empNo); 
+    fillEmployeeDetails(emp); 
     
     // This fills the financial boxes (Gross, Net, Deductions)
     updateSalaryDisplay(emp, actualHours, 0.0);
+    
     }//GEN-LAST:event_viewPayslipActionPerformed
 
     private void exitPayslipActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_exitPayslipActionPerformed
@@ -607,6 +614,7 @@ public class Payslip extends javax.swing.JFrame {
     double sss = salaryService.calculateSSS(monthlyEquivalent) / 2;
     double philhealth = salaryService.calculatePhilHealth(monthlyEquivalent) / 2;
     double pagibig = salaryService.calculatePagIbig(monthlyEquivalent) / 2;
+   
     
     // Fill the Pag-IBIG and Tax boxes which were ₱0.00 in your screenshot
     pagibigDeductionsValue.setText(String.format("₱%,.2f", pagibig));
@@ -614,6 +622,7 @@ public class Payslip extends javax.swing.JFrame {
     double totalDeductions = sss + philhealth + pagibig;
     double taxableIncome = gross - totalDeductions;
     double tax = salaryService.calculateWithholdingTax(taxableIncome);
+    
     
     withholdingTaxDeductionsValue.setText(String.format("₱%,.2f", tax));
     deductionValue.setText(String.format("₱%,.2f", totalDeductions + tax));
@@ -623,18 +632,35 @@ public class Payslip extends javax.swing.JFrame {
     netPayValue.setText(String.format("₱%,.2f", netPay));
 }
     
-    private void fillEmployeeDetails(String empNo) {
-    Employee emp = new EmployeeRepository().findById(Integer.parseInt(empNo)).orElse(null);
+    private void fillEmployeeDetails(Employee emp) {
+	
     if (emp != null) {
-        empIDPayslipValue.setText(String.valueOf(emp.getEmployeeNumber())); 
-        empPositionValue.setText(emp.getPosition());
-        empStatusValue.setText(emp.getStatus());
-        sssNumberPayslipValue.setText(String.valueOf(emp.getSssNumber()));
-        tinNumberPayslipValue.setText(String.valueOf(emp.getTinNumber()));
-        philhealthNumberPayslipValue.setText(String.valueOf(emp.getPhilHealthNumber()));
-        pagibigNumberPayslipValue.setText(String.valueOf(emp.getPagIbigNumber()));
-    }
+        
+    // 1.Employee Identity
+    empIDPayslipValue.setText(String.valueOf(emp.getEmployeeNumber()));
+    empPositionValue.setText(emp.getPosition());
+    empStatusValue.setText(emp.getStatus());
+
+    //2.Statutory IDs
+    sssNumberPayslipValue.setText(emp.getSssNumber());
+    tinNumberPayslipValue.setText(emp.getTinNumber());
+    philhealthNumberPayslipValue.setText(emp.getPhilHealthNumber());
+    pagibigNumberPayslipValue.setText(emp.getPagIbigNumber());
+    
+    // Allowances
+    
+    
+    double semiMonthlyRice = emp.getRiceSubsidy() / 2;
+    double semiMonthlyPhone = emp.getPhoneAllowance() / 2;
+    double semiMonthlyClothing = emp.getClothingAllowance() / 2;
+    
+    riceAllowanceValue.setText(String.format("%.2f", emp.getRiceSubsidy()));
+    phoneAllowanceValue.setText(String.format("%.2f", emp.getPhoneAllowance()));
+    clothingAllowanceValue.setText(String.format("%.2f", emp.getClothingAllowance()));
+    
+    hourlyRateValue.setText(String.format("%.2f", emp.getHourlyRate()));
 }
+    }
 
  private void calculateFinalSalary(String empNo, String period) {
         try {

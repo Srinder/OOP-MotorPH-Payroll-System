@@ -11,6 +11,7 @@ import model.User;
 import javax.swing.JOptionPane;
 import javax.swing.JPasswordField;
 import model.Employee;
+import repository.UserRepository;
 
 
 
@@ -138,7 +139,7 @@ public class LoginScreen1 extends javax.swing.JFrame {
 
         // 1. AUTHENTICATION: This now returns a polymorphic Employee (Admin, HRStaff, etc.)
         // This is a refined UserDatabase that talks to our EmployeeRepository
-        Employee emp = User.authenticate(username, password);
+        Employee emp = UserDatabase.authenticate(username, password);
 
         if (emp != null) {
             // Password is correct. Now, conceptually check 2FA base on the given dummy emails in the CSV

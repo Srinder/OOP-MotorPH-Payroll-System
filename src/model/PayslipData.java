@@ -13,7 +13,13 @@ package model;
 
 public class PayslipData {
     private String period;
-    private double gross, sss, philhealth, pagibig, tax, allowances, net;
+    private double gross;
+    private double sss;
+    private double philhealth;
+    private double pagibig;
+    private double tax;
+    private double allowances;
+    private double net;
 
     public PayslipData(String period, double gross, double sss, double philhealth, 
                        double pagibig, double tax, double allowances, double net) {

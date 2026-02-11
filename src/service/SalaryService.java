@@ -9,8 +9,8 @@ public class SalaryService implements ISalaryService{
 
     // MASTER METHOD: This is what our GUI will call for the final net pay.
     @Override
-    public double calculateSemiMonthlyNet(Employee emp, double hours, double otHours) {
-        double semiMonthlyGross = calculateGrossIncome(emp, hours, otHours);
+    public double calculateSemiMonthlyNet(Employee emp, double hours, double overtimeHours) {
+        double semiMonthlyGross = calculateGrossIncome(emp, hours, overtimeHours);
         
         // Convert to monthly to find the correct SSS/PhilHealth/PagIbig bracket
         double monthlyEquivalent = semiMonthlyGross * 2; 

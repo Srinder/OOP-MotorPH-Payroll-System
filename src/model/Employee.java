@@ -91,13 +91,7 @@ public abstract class Employee implements ICalculatable {
         this.withholdingTax = withholdingTax;
     }
     
-    //ABSTRACT METHODS (ICalculatable)
-    @Override
-    public abstract double calculateGrossIncome(double hoursWorked, double overtimeHours);
     
-    @Override
-    public abstract double calculateNetPay(double grossIncome, double totalDeductions);
-
     //HELPER METHODS
     //instead of storing full name, compute it when needed
     public String getFullName(){
@@ -194,6 +188,8 @@ public abstract class Employee implements ICalculatable {
     public double getWithholdingTax() {
         return withholdingTax;
     }
+    
+    //-----------Setters----------
 
     public void setEmployeeNumber(int employeeNumber) {   
         this.employeeNumber = employeeNumber;
@@ -275,10 +271,17 @@ public abstract class Employee implements ICalculatable {
         this.hourlyRate = hourlyRate;
     }
 
-    //-----------Setters----------
     public void setWithholdingTax(double withholdingTax) {
         this.withholdingTax = withholdingTax;
     }
+    
+    //ABSTRACT METHODS (ICalculatable)
+    @Override
+    public abstract double calculateGrossIncome(double hoursWorked, double overtimeHours);
+    
+    @Override
+    public abstract double calculateNetPay(double grossIncome, double totalDeductions);
+
 
     /**
      * Overridden toString() method provides a readable representation of the employee object.
