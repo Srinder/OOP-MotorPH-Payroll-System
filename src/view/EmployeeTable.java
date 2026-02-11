@@ -79,7 +79,7 @@ public class EmployeeTable extends javax.swing.JFrame {
 }
     } catch (Exception e) {
         System.out.println("CRASH DURING LOAD: " + e.getMessage());
-        e.printStackTrace(); // This will tell us the exact line causing the "huhu"
+        e.printStackTrace(); 
     }
 }
     

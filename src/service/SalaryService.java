@@ -1,9 +1,10 @@
 package service;
 
 import model.Employee;
+import model.ICalculatable;
 import repository.SSSRepository;
 
-public class SalaryService implements ISalaryService{
+public class SalaryService implements ISalaryService {
     
     private final SSSRepository sssRepository = new SSSRepository();
 
@@ -38,13 +39,13 @@ public class SalaryService implements ISalaryService{
         return regularPay + overtimePay;
     }
 
-    // Added for Payslip.java 
+    
     @Override
     public double calculateSSS(double monthlyGross) {
         return sssRepository.getPremiumByIncome(monthlyGross);
     }
 
-    //Added for Payslip.java (Line 84)
+    
     @Override
     public double calculateWithholdingTax(double taxableIncome) {
         return calculateSemiMonthlyWithholdingTax(taxableIncome);
@@ -75,4 +76,4 @@ public class SalaryService implements ISalaryService{
         if (taxableIncome <= 333332) return 20416.67 + (taxableIncome - 83333) * 0.32;
         return 100416.67 + (taxableIncome - 333333) * 0.35;
     }
-}
+   }
