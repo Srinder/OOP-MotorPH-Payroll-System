@@ -1,14 +1,14 @@
 package view;
 
-import repository.EmployeeRepository;
+import service.ISalaryService;
 import service.SalaryService;
+import service.IEmployeeManagementService;
+import service.EmployeeManagementService;
 import model.Employee;
 import model.PayslipData;
 import javax.swing.JOptionPane;
 import javax.swing.JLabel;
-import java.io.FileOutputStream;
-import com.itextpdf.text.*;
-import com.itextpdf.text.pdf.*;
+import java.awt.Image;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.time.LocalDate;
@@ -17,49 +17,45 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import javax.swing.DefaultComboBoxModel;
+import javax.swing.ImageIcon;
 import javax.swing.JFileChooser;
 import model.User;
-import service.ISalaryService;
-
-
-/**
- *
- * @author singh
- */
-
 
 public class Payslip extends javax.swing.JFrame {
-        private String empNo;
-        private final ISalaryService salaryService = new SalaryService();
-        private static final DateTimeFormatter CSV_DATE_FORMAT = DateTimeFormatter.ofPattern("MM/dd/yyyy");
-        private final Map<String, LocalDate> cutoffDateOptions = new LinkedHashMap<>();
+    private String empNo;
+    private final ISalaryService salaryService;
+    private final IEmployeeManagementService employeeService;
+    private final Map<String, LocalDate> cutoffDateOptions = new LinkedHashMap<>();
 
-    public Payslip(String empNo){
+    public Payslip(String empNo) {
+        this(empNo, new SalaryService(), new EmployeeManagementService());
+    }
+    
+    public Payslip(String empNo, ISalaryService salaryService, IEmployeeManagementService employeeService) {
+        this.empNo = empNo;
+        this.salaryService = salaryService;
+        this.employeeService = employeeService;
         initComponents();
-        setAttendanceAdjustmentVisibility(false, false, false);
+        WindowNavigation.installReturnToMainMenuOnClose(this);
+        configureHeaderImage();
+        setAttendanceAdjustmentVisibility(false, false, false, false);
         hourlyRate.setVisible(false);
         hourlyRateValue.setVisible(false);
-        this.empNo = empNo;
         
-        Employee emp = new EmployeeRepository().findById(Integer.parseInt(empNo)).orElse(null);
+        Integer employeeId = parseEmployeeId(this.empNo);
+        if (employeeId != null) {
+            Employee emp = employeeService.getEmployeeById(employeeId).orElse(null);
             if (emp != null) {
-        employeeNameLabel.setText(emp.getLastName() + ", " + emp.getFirstName());
+                employeeNameLabel.setText(emp.getLastName() + ", " + emp.getFirstName());
             }
-            
+        }
+        
         loadCutoffDateOptions();
         this.setLocationRelativeTo(null);
-}
-    
+    }
 
-    /**
-     * Creates new form Payslip
-     */
     public Payslip() {
-        initComponents();
-        setAttendanceAdjustmentVisibility(false, false, false);
-        hourlyRate.setVisible(false);
-        hourlyRateValue.setVisible(false);
-        cutoffDateCombo.setModel(new DefaultComboBoxModel<>(new String[] {"Select cutoff date"}));
+        this("", new SalaryService(), new EmployeeManagementService());
     }
 
     /**
@@ -77,6 +73,8 @@ public class Payslip extends javax.swing.JFrame {
         cutoffDateCombo = new javax.swing.JComboBox<>();
         viewPayslip = new javax.swing.JButton();
         downloadPayslip = new javax.swing.JButton();
+        motorphBrandLabel = new javax.swing.JLabel();
+        logoHeaderLabel = new javax.swing.JLabel();
         summary = new javax.swing.JLabel();
         summary1 = new javax.swing.JLabel();
         grossIncomeValue = new javax.swing.JLabel();
@@ -157,6 +155,12 @@ public class Payslip extends javax.swing.JFrame {
                 downloadPayslipActionPerformed(evt);
             }
         });
+
+        motorphBrandLabel.setFont(motorphBrandLabel.getFont().deriveFont(java.awt.Font.BOLD, 18f));
+        motorphBrandLabel.setText("MOTORPH");
+
+        logoHeaderLabel.setHorizontalAlignment(javax.swing.SwingConstants.CENTER);
+        logoHeaderLabel.setPreferredSize(new java.awt.Dimension(160, 52));
 
         summary.setText("SUMMARY:");
 
@@ -279,7 +283,11 @@ public class Payslip extends javax.swing.JFrame {
                     .addGroup(layout.createSequentialGroup()
                         .addComponent(ElectronicPayslip, javax.swing.GroupLayout.PREFERRED_SIZE, 200, javax.swing.GroupLayout.PREFERRED_SIZE)
                         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                        .addComponent(employeeNameLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 300, javax.swing.GroupLayout.PREFERRED_SIZE))
+                        .addComponent(employeeNameLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 300, javax.swing.GroupLayout.PREFERRED_SIZE)
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 201, Short.MAX_VALUE)
+                        .addComponent(motorphBrandLabel)
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
+                        .addComponent(logoHeaderLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 160, javax.swing.GroupLayout.PREFERRED_SIZE))
                     .addGroup(layout.createSequentialGroup()
                         .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                             .addGroup(layout.createSequentialGroup()
@@ -346,9 +354,7 @@ public class Payslip extends javax.swing.JFrame {
                                 .addComponent(cutOff, javax.swing.GroupLayout.PREFERRED_SIZE, 65, javax.swing.GroupLayout.PREFERRED_SIZE)
                                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                                 .addComponent(cutoffDateCombo, javax.swing.GroupLayout.PREFERRED_SIZE, 200, javax.swing.GroupLayout.PREFERRED_SIZE)
-                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 151, Short.MAX_VALUE)
-                                .addGap(18, 18, 18)
-                                .addComponent(payDateLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 230, javax.swing.GroupLayout.PREFERRED_SIZE)))
+                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 399, Short.MAX_VALUE)))
                         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                         .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                             .addComponent(employeeDetails, javax.swing.GroupLayout.PREFERRED_SIZE, 143, javax.swing.GroupLayout.PREFERRED_SIZE)
@@ -373,6 +379,7 @@ public class Payslip extends javax.swing.JFrame {
                                         .addComponent(empIDPayslipValue, javax.swing.GroupLayout.Alignment.TRAILING, javax.swing.GroupLayout.DEFAULT_SIZE, 133, Short.MAX_VALUE)
                                         .addComponent(empPositionValue, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                                         .addComponent(empStatusValue, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))))
+                            .addComponent(payDateLabel, javax.swing.GroupLayout.Alignment.TRAILING, javax.swing.GroupLayout.PREFERRED_SIZE, 230, javax.swing.GroupLayout.PREFERRED_SIZE)
                             .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, layout.createSequentialGroup()
                                 .addComponent(viewPayslip, javax.swing.GroupLayout.PREFERRED_SIZE, 112, javax.swing.GroupLayout.PREFERRED_SIZE)
                                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
@@ -387,19 +394,22 @@ public class Payslip extends javax.swing.JFrame {
             layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(layout.createSequentialGroup()
                 .addGap(23, 23, 23)
-                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.CENTER)
                     .addComponent(ElectronicPayslip, javax.swing.GroupLayout.PREFERRED_SIZE, 26, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addComponent(employeeNameLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 26, javax.swing.GroupLayout.PREFERRED_SIZE))
-                .addGap(54, 54, 54)
+                    .addComponent(employeeNameLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 26, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(motorphBrandLabel)
+                    .addComponent(logoHeaderLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 52, javax.swing.GroupLayout.PREFERRED_SIZE))
+                .addGap(18, 18, 18)
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING)
                     .addComponent(cutOff)
-                    .addComponent(cutoffDateCombo, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                        .addComponent(payDateLabel, javax.swing.GroupLayout.Alignment.TRAILING, javax.swing.GroupLayout.PREFERRED_SIZE, 23, javax.swing.GroupLayout.PREFERRED_SIZE)
-                        .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                            .addComponent(viewPayslip)
-                            .addComponent(downloadPayslip))))
-                .addGap(30, 30, 30)
+                    .addComponent(cutoffDateCombo, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                .addGap(2, 2, 2)
+                .addComponent(payDateLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 23, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addGap(2, 2, 2)
+                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                    .addComponent(viewPayslip)
+                    .addComponent(downloadPayslip))
+                .addGap(14, 14, 14)
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
                     .addComponent(summary)
                     .addComponent(payDetails)
@@ -563,7 +573,7 @@ public class Payslip extends javax.swing.JFrame {
         try {
             LocalDate cutoffDate = cutoffDateOptions.get(selectedCutoff);
             String exportCutoffText = (cutoffDate != null)
-                    ? cutoffDate.format(CSV_DATE_FORMAT)
+                    ? cutoffDate.format(DateTimeFormatter.ofPattern("MM/dd/yyyy"))
                     : selectedCutoff;
             if (exportCutoffText == null || exportCutoffText.trim().isEmpty() || exportCutoffText.equals("Select cutoff date")) {
                 JOptionPane.showMessageDialog(this, "Please select a valid payslip cutoff date first.");
@@ -596,19 +606,12 @@ public class Payslip extends javax.swing.JFrame {
             getContentPane().paint(g2);
             g2.dispose();
 
-            Document document = new Document(PageSize.A4.rotate(), 20, 20, 20, 20);
-            PdfWriter.getInstance(document, new FileOutputStream(outputPath));
-            document.open();
-
-            com.itextpdf.text.Image pdfImage = com.itextpdf.text.Image.getInstance(image, null);
-            float pageWidth = document.getPageSize().getWidth() - document.leftMargin() - document.rightMargin();
-            float pageHeight = document.getPageSize().getHeight() - document.topMargin() - document.bottomMargin();
-            pdfImage.scaleToFit(pageWidth, pageHeight);
-            pdfImage.setAlignment(Element.ALIGN_CENTER);
-            document.add(pdfImage);
-
-            document.close();
-            JOptionPane.showMessageDialog(this, "Payslip saved to:\n" + outputPath);
+            boolean exported = salaryService.exportPayslipPdf(image, outputPath);
+            if (exported) {
+                JOptionPane.showMessageDialog(this, "Payslip saved to:\n" + outputPath);
+            } else {
+                JOptionPane.showMessageDialog(this, "Failed to export payslip PDF.", "Export Error", JOptionPane.ERROR_MESSAGE);
+            }
         } catch (Exception ex) {
             JOptionPane.showMessageDialog(this, "Failed to export payslip PDF:\n" + ex.getMessage(), "Export Error", JOptionPane.ERROR_MESSAGE);
         } finally {
@@ -639,17 +642,20 @@ public class Payslip extends javax.swing.JFrame {
     LocalDate startDate = cutoffPeriod[0];
     LocalDate endDate = cutoffPeriod[1];
 
-    EmployeeRepository empRepo = new EmployeeRepository();
-    Employee emp = empRepo.findById(Integer.parseInt(this.empNo)).orElse(null);
+    Integer employeeId = parseEmployeeId(this.empNo);
+    if (employeeId == null) {
+        JOptionPane.showMessageDialog(this, "Invalid employee ID.");
+        return;
+    }
+
+    Employee emp = employeeService.getEmployeeById(employeeId).orElse(null);
 
     if (emp == null) {
         JOptionPane.showMessageDialog(this, "Employee not found!");
         return;
     }
 
-    DateTimeFormatter displayFormat = DateTimeFormatter.ofPattern("MMM d");
-    String periodLabel = "Cutoff Period: " + startDate.format(displayFormat) + " - " + endDate.format(displayFormat);
-    payDateLabel.setText(periodLabel);
+    payDateLabel.setText(buildCutoffPeriodLabel(cutoffDate));
 
     PayslipData computation = salaryService.computePayslipData(emp, this.empNo, startDate, endDate);
 
@@ -662,6 +668,7 @@ public class Payslip extends javax.swing.JFrame {
     fillEmployeeDetails(emp);
     updateSalaryDisplay(emp, computation);
 }//GEN-LAST:event_viewPayslipActionPerformed
+
     private void loadCutoffDateOptions() {
         cutoffDateOptions.clear();
 
@@ -675,7 +682,7 @@ public class Payslip extends javax.swing.JFrame {
 
         List<LocalDate> availableCutoffs = salaryService.getAvailableCutoffDates(this.empNo);
         for (LocalDate cutoffDate : availableCutoffs) {
-            String label = cutoffDate.format(CSV_DATE_FORMAT);
+            String label = cutoffDate.format(DateTimeFormatter.ofPattern("MM/dd/yyyy"));
             cutoffDateOptions.put(label, cutoffDate);
             model.addElement(label);
         }
@@ -684,7 +691,7 @@ public class Payslip extends javax.swing.JFrame {
     }
 
     private void exitPayslipActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_exitPayslipActionPerformed
-        // TODO add your handling code here:
+        
         dispose();
     }//GEN-LAST:event_exitPayslipActionPerformed
 
@@ -728,15 +735,19 @@ public class Payslip extends javax.swing.JFrame {
         overtimeValue.setText(String.format("%.2f", computation.getOvertimeAdjustment()));
         lateValue.setText(String.format("%.2f", computation.getLateAdjustment()));
         undertimeValue.setText(String.format("%.2f", computation.getUndertimeAdjustment()));
+        hourlyRate.setText("Absent:");
+        hourlyRateValue.setText(String.format("%.2f", computation.getAbsentAdjustment()));
 
         setAttendanceAdjustmentVisibility(
                 computation.getOvertimeAdjustment() != 0.0,
                 computation.getLateAdjustment() != 0.0,
-                computation.getUndertimeAdjustment() != 0.0);
+                computation.getUndertimeAdjustment() != 0.0,
+                computation.getAbsentAdjustment() != 0.0);
 
         double totalAdjustments = computation.getOvertimeAdjustment()
                 + computation.getLateAdjustment()
-                + computation.getUndertimeAdjustment();
+                + computation.getUndertimeAdjustment()
+                + computation.getAbsentAdjustment();
         otherAdjustmentValue.setText(String.format("\u20B1%,.2f", totalAdjustments));
         boolean hasOtherAdjustment = Math.abs(totalAdjustments) > 0.0001;
         deductions1.setVisible(hasOtherAdjustment);
@@ -770,30 +781,73 @@ public class Payslip extends javax.swing.JFrame {
         }
     }
 
-    private void setAttendanceAdjustmentVisibility(boolean hasOvertime, boolean hasLate, boolean hasUndertime) {
+    private void setAttendanceAdjustmentVisibility(boolean hasOvertime, boolean hasLate, boolean hasUndertime, boolean hasAbsent) {
         overtime.setVisible(hasOvertime);
         overtimeValue.setVisible(hasOvertime);
         lateLabel.setVisible(hasLate);
         lateValue.setVisible(hasLate);
         undertimeLabel.setVisible(hasUndertime);
         undertimeValue.setVisible(hasUndertime);
+        hourlyRate.setVisible(hasAbsent);
+        hourlyRateValue.setVisible(hasAbsent);
     }
 
-    private String formatAsHHmm(long totalMinutes) {
-        long safeMinutes = Math.max(0L, totalMinutes);
-        long hoursPart = safeMinutes / 60;
-        long minutesPart = safeMinutes % 60;
-        return String.format("%02d:%02d", hoursPart, minutesPart);
-    }
-
-    private void calculateFinalSalary(String empNo, String period) {
+    private Integer parseEmployeeId(String rawEmpNo) {
+        if (rawEmpNo == null || rawEmpNo.trim().isEmpty()) {
+            return null;
+        }
         try {
-            payDateLabel.setText(period);
-            empIDPayslipValue.setText(empNo);
-        } catch (Exception e) {
-            System.err.println("Error: " + e.getMessage());
+            return Integer.parseInt(rawEmpNo.trim());
+        } catch (NumberFormatException ex) {
+            return null;
         }
     }
+
+    private String buildCutoffPeriodLabel(LocalDate cutoffDate) {
+        if (cutoffDate == null) {
+            return "";
+        }
+        LocalDate[] cutoffPeriod = salaryService.getCutoffPeriod(cutoffDate);
+        DateTimeFormatter displayFormat = DateTimeFormatter.ofPattern("MMM d");
+        return "Cutoff Period: " + cutoffPeriod[0].format(displayFormat) + " - " + cutoffPeriod[1].format(displayFormat);
+    }
+
+    private void configureHeaderImage() {
+        ImageIcon icon = null;
+        java.net.URL imgUrl = getClass().getResource("/util/logerHeader.png");
+        if (imgUrl == null) {
+            imgUrl = getClass().getResource("/util/logoHeader.png");
+        }
+        if (imgUrl != null) {
+            icon = new ImageIcon(imgUrl);
+        }
+
+        if (icon == null || icon.getIconWidth() <= 0 || icon.getIconHeight() <= 0) {
+            logoHeaderLabel.setText("MotorPH");
+            return;
+        }
+
+        int maxWidth = 160;
+        int maxHeight = 52;
+        int srcWidth = icon.getIconWidth();
+        int srcHeight = icon.getIconHeight();
+
+        double widthScale = (double) maxWidth / srcWidth;
+        double heightScale = (double) maxHeight / srcHeight;
+        double scale = Math.min(1.0, Math.min(widthScale, heightScale));
+
+        int targetWidth = Math.max(1, (int) Math.round(srcWidth * scale));
+        int targetHeight = Math.max(1, (int) Math.round(srcHeight * scale));
+
+        Image image = icon.getImage();
+        if (scale < 1.0) {
+            image = image.getScaledInstance(targetWidth, targetHeight, Image.SCALE_SMOOTH);
+        }
+
+        logoHeaderLabel.setIcon(new ImageIcon(image));
+        logoHeaderLabel.setText("");
+    }
+
     // Variables declaration - do not modify//GEN-BEGIN:variables
     private javax.swing.JLabel ElectronicPayslip;
     private javax.swing.JLabel allowances;
@@ -826,6 +880,8 @@ public class Payslip extends javax.swing.JFrame {
     private javax.swing.JLabel hoursWorkedValue;
     private javax.swing.JLabel lateLabel;
     private javax.swing.JLabel lateValue;
+    private javax.swing.JLabel logoHeaderLabel;
+    private javax.swing.JLabel motorphBrandLabel;
     private javax.swing.JLabel netPay;
     private javax.swing.JLabel netPayValue;
     private javax.swing.JLabel otherAdjustmentValue;

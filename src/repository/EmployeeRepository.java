@@ -46,11 +46,37 @@ public class EmployeeRepository extends BaseRepository<Employee> {
                 .findFirst();
     }
     
+    public Optional<Employee> findByIdWithRole(int id, String accessRole) {
+        try (CSVReader reader = new CSVReader(new FileReader(getFilePath()))) {
+            reader.readNext(); // Skip header
+            String[] row;
+            while ((row = reader.readNext()) != null) {
+                if (row.length >= 1 && Integer.parseInt(row[0].trim()) == id) {
+                    Employee emp = mapRowToEmployeeWithRole(row, accessRole);
+                    return Optional.of(emp);
+                }
+            }
+        } catch (Exception e) {
+            System.err.println("Error finding employee by ID with role: " + e.getMessage());
+        }
+        return Optional.empty();
+    }
+    
     @Override
     public void save(Employee employee) {
         try (FileWriter fw = new FileWriter(getFilePath(), true);
              CSVWriter writer = new CSVWriter(fw)) {
             writer.writeNext(formatEmployeeData(employee));
+        } catch (IOException e) {
+            // Throwing the exception allows the GUI/Service layer to handle the error display
+            throw new RuntimeException("Could not save employee to CSV. File may be locked.", e);
+        }
+    }
+
+    public void save(Employee employee, String accessLevel) {
+        try (FileWriter fw = new FileWriter(getFilePath(), true);
+             CSVWriter writer = new CSVWriter(fw)) {
+            writer.writeNext(formatEmployeeData(employee, accessLevel));
         } catch (IOException e) {
             // Throwing the exception allows the GUI/Service layer to handle the error display
             throw new RuntimeException("Could not save employee to CSV. File may be locked.", e);
@@ -89,6 +115,18 @@ public class EmployeeRepository extends BaseRepository<Employee> {
     }
 
     private Employee mapRowToEmployee(String[] data) {
+        String role = (data.length > 20) ? data[20].trim().toUpperCase() : "REGULAR";
+        return buildEmployeeFromRow(data, role);
+    }
+
+    private Employee mapRowToEmployeeWithRole(String[] data, String accessRole) {
+        String role = (accessRole == null || accessRole.trim().isEmpty())
+                ? ((data.length > 20) ? data[20].trim().toUpperCase() : "REGULAR")
+                : accessRole.trim().toUpperCase();
+        return buildEmployeeFromRow(data, role);
+    }
+
+    private Employee buildEmployeeFromRow(String[] data, String role) {
         int id = Integer.parseInt(data[0].trim());
         String lastName = data[1].trim();
         String firstName = data[2].trim();
@@ -109,9 +147,7 @@ public class EmployeeRepository extends BaseRepository<Employee> {
         double hourly = parseDouble(data[17]);
         double tax = parseDouble(data[18]);
         String birthday = data[19].trim();
-        
-        String role = (data.length > 20) ? data[20].trim().toUpperCase() : "REGULAR"; 
-    
+
         return switch (role) {
             case "ADMIN" -> new AdminStaff(id, lastName, firstName, birthday, phone, address, status, position, supervisor, sss, philhealth, tin, pagibig, basic, rice, phoneAllowance, clothing, semiMonthly, hourly, tax);
             case "HR" -> new HRStaff(id, lastName, firstName, birthday, phone, address, status, position, supervisor, sss, philhealth, tin, pagibig, basic, rice, phoneAllowance, clothing, semiMonthly, hourly, tax);
@@ -123,6 +159,10 @@ public class EmployeeRepository extends BaseRepository<Employee> {
     }
 
     private String[] formatEmployeeData(Employee e) {
+        return formatEmployeeData(e, e.getRole());
+    }
+
+    private String[] formatEmployeeData(Employee e, String accessLevel) {
         return new String[]{
             String.valueOf(e.getEmployeeNumber()), e.getLastName(), e.getFirstName(),
             e.getPhoneNumber(), e.getStatus(), e.getPosition(), e.getSupervisor(),
@@ -131,8 +171,8 @@ public class EmployeeRepository extends BaseRepository<Employee> {
             String.valueOf(e.getRiceSubsidy()), String.valueOf(e.getPhoneAllowance()),
             String.valueOf(e.getClothingAllowance()), String.valueOf(e.getGrossSemiMonthlyRate()),
             String.valueOf(e.getHourlyRate()), String.valueOf(e.getWithholdingTax()),
-            e.getBirthday(), 
-            e.getRole() 
+            e.getBirthday(),
+            accessLevel
         };
     }
 

@@ -27,9 +27,11 @@ public class PayslipData {
     private long overtimeMinutes;
     private long lateMinutes;
     private long undertimeMinutes;
+    private long absentDays;
     private double overtimeAdjustment;
     private double lateAdjustment;
     private double undertimeAdjustment;
+    private double absentAdjustment;
 
     public PayslipData(String period, double gross, double sss, double philhealth, 
                        double pagibig, double tax, double allowances, double net) {
@@ -48,9 +50,11 @@ public class PayslipData {
         this.overtimeMinutes = 0L;
         this.lateMinutes = 0L;
         this.undertimeMinutes = 0L;
+        this.absentDays = 0L;
         this.overtimeAdjustment = 0.0;
         this.lateAdjustment = 0.0;
         this.undertimeAdjustment = 0.0;
+        this.absentAdjustment = 0.0;
     }
 
     public PayslipData(
@@ -60,9 +64,11 @@ public class PayslipData {
             long overtimeMinutes,
             long lateMinutes,
             long undertimeMinutes,
+            long absentDays,
             double overtimeAdjustment,
             double lateAdjustment,
             double undertimeAdjustment,
+            double absentAdjustment,
             double gross,
             double sss,
             double philhealth,
@@ -78,9 +84,11 @@ public class PayslipData {
         this.overtimeMinutes = overtimeMinutes;
         this.lateMinutes = lateMinutes;
         this.undertimeMinutes = undertimeMinutes;
+        this.absentDays = absentDays;
         this.overtimeAdjustment = overtimeAdjustment;
         this.lateAdjustment = lateAdjustment;
         this.undertimeAdjustment = undertimeAdjustment;
+        this.absentAdjustment = absentAdjustment;
         this.gross = gross;
         this.sss = sss;
         this.philhealth = philhealth;
@@ -125,9 +133,11 @@ public class PayslipData {
     public long getOvertimeMinutes() { return overtimeMinutes; }
     public long getLateMinutes() { return lateMinutes; }
     public long getUndertimeMinutes() { return undertimeMinutes; }
+    public long getAbsentDays() { return absentDays; }
     public double getOvertimeAdjustment() { return overtimeAdjustment; }
     public double getLateAdjustment() { return lateAdjustment; }
     public double getUndertimeAdjustment() { return undertimeAdjustment; }
+    public double getAbsentAdjustment() { return absentAdjustment; }
     public double getSemiMonthlyBasicSalary() { return semiMonthlyBasicSalary; }
    
 }

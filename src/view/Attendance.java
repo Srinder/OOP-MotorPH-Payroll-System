@@ -1,80 +1,89 @@
 package view;
 
-import repository.AttendanceRepository;
-import repository.EmployeeRepository;
 import model.AttendanceRecord;
-import model.User;
 import javax.swing.JFrame;
 import java.util.List;
 import java.time.LocalDate;
-import java.util.Map;
-import java.util.Vector;
 import javax.swing.JOptionPane;
 import javax.swing.table.DefaultTableModel;
-import java.util.ArrayList;
-import java.io.IOException;
 import model.AdminStaff;
 import model.HRStaff;
 import model.FinanceStaff;
-import model.ITStaff;
-import model.RegularEmployee;
-import service.AttendanceService;
 import service.IAttendanceService;
+import service.AttendanceService;
+import java.util.ArrayList;
+import java.util.Vector;
 
 public class Attendance extends JFrame {
 
     private String empNo;
-    private IAttendanceService attendanceService = new AttendanceService();
+    private final IAttendanceService attendanceService;
 
     public Attendance(String empNo) {
+        this(empNo, false, new AttendanceService());
+    }
+    
+    public Attendance(String empNo, boolean skipInitialSearchPrompt) {
+        this(empNo, skipInitialSearchPrompt, new AttendanceService());
+    }
+    
+    public Attendance(String empNo, boolean skipInitialSearchPrompt, IAttendanceService attendanceService) {
         this.empNo = empNo;
+        this.attendanceService = attendanceService;
         initComponents();
+        WindowNavigation.installReturnToMainMenuOnClose(this);
 
-        // 1. Identify the user and their role
+        // Identify the user and their role
         model.Employee current = model.User.getLoggedInUser();
         boolean powerUser = isPowerUser();
        
-
         if (powerUser) {
             // Setup for Admin/HR/Finance
             jLabel3.setText("View Mode: Administrative Control");
-            employeeIDLabel.setText("Click to Search ID");
             updateAttendanceButton.setVisible(true);
             jButtonSave.setVisible(true);
 
-            employeeIDLabel.setCursor(new java.awt.Cursor(java.awt.Cursor.HAND_CURSOR));
-            employeeIDLabel.addMouseListener(new java.awt.event.MouseAdapter() {
-                public void mouseClicked(java.awt.event.MouseEvent evt) {
-                    showSearchDialog();
+            if (skipInitialSearchPrompt) {
+                employeeIDLabel.setText("Employee ID: " + empNo);
+                employeeIDLabel.setCursor(new java.awt.Cursor(java.awt.Cursor.DEFAULT_CURSOR));
+                for (java.awt.event.MouseListener ml : employeeIDLabel.getMouseListeners()) {
+                    employeeIDLabel.removeMouseListener(ml);
                 }
-            });
+                loadEmployeeName();
+                loadAttendanceRecords(empNo, LocalDate.now().minusMonths(1), LocalDate.now());
+            } else {
+                employeeIDLabel.setText("Click to Search ID");
+                employeeIDLabel.setCursor(new java.awt.Cursor(java.awt.Cursor.HAND_CURSOR));
+                employeeIDLabel.addMouseListener(new java.awt.event.MouseAdapter() {
+                    public void mouseClicked(java.awt.event.MouseEvent evt) {
+                        showSearchDialog();
+                    }
+                });
 
-            java.awt.EventQueue.invokeLater(() -> {
-                showSearchDialog();
-            });
+                java.awt.EventQueue.invokeLater(() -> {
+                    showSearchDialog();
+                });
+            }
 
         } else {
             // Setup for Regular, Probationary, and IT
-        // 1. Force buttons to hide
-        updateAttendanceButton.setVisible(false);
-        jButtonSave.setVisible(false);
-        
-        // 2. Lock the ID label so it can't be clicked/searched
-        employeeIDLabel.setText("Employee ID: " + empNo);
-        employeeIDLabel.setCursor(new java.awt.Cursor(java.awt.Cursor.DEFAULT_CURSOR));
-        
-        // 3. Prevent any MouseListeners from working if they were added in Design mode
-        for (java.awt.event.MouseListener ml : employeeIDLabel.getMouseListeners()) {
-            employeeIDLabel.removeMouseListener(ml);
-        }
+            updateAttendanceButton.setVisible(false);
+            jButtonSave.setVisible(false);
+            
+            employeeIDLabel.setText("Employee ID: " + empNo);
+            employeeIDLabel.setCursor(new java.awt.Cursor(java.awt.Cursor.DEFAULT_CURSOR));
+            
+            for (java.awt.event.MouseListener ml : employeeIDLabel.getMouseListeners()) {
+                employeeIDLabel.removeMouseListener(ml);
+            }
 
-        loadEmployeeName();
-        loadAttendanceRecords(empNo, LocalDate.now().minusMonths(1), LocalDate.now());
+            loadEmployeeName();
+            loadAttendanceRecords(empNo, LocalDate.now().minusMonths(1), LocalDate.now());
+        }
     }
-}
 
     public Attendance() {
-        initComponents();
+        this("", false, new AttendanceService());
     }
 
     private boolean isPowerUser() {
@@ -85,46 +94,49 @@ public class Attendance extends JFrame {
                 current instanceof FinanceStaff);
     }
 
-    private void applyRoleRestrictions() {
-        boolean powerUser = isPowerUser();
-        if (!powerUser) {
-            if (updateAttendanceButton != null) updateAttendanceButton.setVisible(false);
-            if (jButtonSave != null) jButtonSave.setVisible(false);
-        } else {
-            if (updateAttendanceButton != null) updateAttendanceButton.setVisible(true);
-            if (jButtonSave != null) jButtonSave.setVisible(true);
-        }
-    }
-
     private void loadEmployeeName() {
         String employeeName = getEmployeeName(empNo);
         jLabel3.setText("Employee Name: " + employeeName);
     }
 
     private String getEmployeeName(String empNo) {
-        try {
-            return new repository.EmployeeRepository().findById(Integer.parseInt(empNo))
-                    .map(e -> e.getFirstName() + " " + e.getLastName())
-                    .orElse("Unknown Employee");
-        } catch (Exception e) {
-            return "Unknown Employee";
-        }
+        return attendanceService.getEmployeeDisplayName(empNo);
     }
 
     public void loadAttendanceRecords(String targetEmpNo, LocalDate startDate, LocalDate endDate) {
         DefaultTableModel model = (DefaultTableModel) jTableAttendance.getModel();
         model.setRowCount(0);
-        List<AttendanceRecord> records = new AttendanceRepository().findAll();
 
+        if (startDate == null || endDate == null) {
+            return;
+        }
+        if (endDate.isBefore(startDate)) {
+            JOptionPane.showMessageDialog(this,
+                    "End date cannot be earlier than start date.",
+                    "Invalid Date Range",
+                    JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+
+        List<AttendanceRecord> records = attendanceService.getAttendanceRecords(targetEmpNo, startDate, endDate);
+        int targetEmpId;
+        try {
+            targetEmpId = Integer.parseInt(targetEmpNo.trim());
+        } catch (NumberFormatException ex) {
+            targetEmpId = -1;
+        }
         for (AttendanceRecord record : records) {
-            if (record.getEmpNo().trim().equals(targetEmpNo.trim())) {
-                model.addRow(new Object[]{
-                    record.getDate(),
-                    record.getLogIn(),
-                    record.getLogOut(),
-                    "", "", ""
-                });
-            }
+            java.util.Map<String, Double> metrics = targetEmpId > 0
+                    ? attendanceService.computeDailyAttendanceMinutes(targetEmpId, record.getDate())
+                    : java.util.Map.of("Late", 0.0, "Overtime", 0.0, "Undertime", 0.0);
+            model.addRow(new Object[]{
+                record.getDate(),
+                record.getLogIn(),
+                record.getLogOut(),
+                metrics.get("Late"),
+                metrics.get("Overtime"),
+                metrics.get("Undertime")
+            });
         }
     }
 
@@ -136,17 +148,7 @@ public class Attendance extends JFrame {
 
         if (query == null || query.trim().isEmpty()) return;
 
-        repository.EmployeeRepository empRepo = new repository.EmployeeRepository();
-        List<model.Employee> allEmployees = empRepo.findAll();
-        List<model.Employee> matches = new ArrayList<>();
-
-        for (model.Employee e : allEmployees) {
-            String fullName = (e.getLastName() + ", " + e.getFirstName()).toLowerCase();
-            String idStr = String.valueOf(e.getEmployeeNumber());
-            if (idStr.equals(query.trim()) || fullName.contains(query.toLowerCase().trim())) {
-                matches.add(e);
-            }
-        }
+        List<model.Employee> matches = attendanceService.searchEmployees(query);
 
         if (matches.isEmpty()) {
             JOptionPane.showMessageDialog(this, "No employee found matching: " + query);
@@ -319,16 +321,7 @@ public class Attendance extends JFrame {
     }// </editor-fold>//GEN-END:initComponents
 
     private void jButtonExitActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButtonExitActionPerformed
-
-      // 1. Re-verify the session
-        model.Employee current = model.User.getLoggedInUser(); 
-
-        if (current != null) {
-            // 2. Open MainMenu (This triggers applyRolePermissions() in its constructor)
-            MainMenu mainFrame = new MainMenu(); 
-            mainFrame.setVisible(true);
-            this.dispose();
-        }
+        this.dispose();
     }//GEN-LAST:event_jButtonExitActionPerformed
 
     private void checkAttendanceButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_checkAttendanceButtonActionPerformed
@@ -346,20 +339,7 @@ public class Attendance extends JFrame {
 
         DefaultTableModel model = (DefaultTableModel) jTableAttendance.getModel();
 
-        // 🕒 Compute daily attendance stats
-        for (int row = 0; row < model.getRowCount(); row++) {
-            String dateStr = (String) model.getValueAt(row, 0); // Date column
-
-            if (dateStr != null && !dateStr.trim().isEmpty()) {
-                Map<String, Double> attendanceMinutes = attendanceService.computeDailyAttendanceMinutes(Integer.parseInt(empNo), dateStr);
-
-                model.setValueAt(attendanceMinutes.get("Late"), row, 3);      // Late = Column 3
-                model.setValueAt(attendanceMinutes.get("Overtime"), row, 4);  // Overtime = Column 4
-                model.setValueAt(attendanceMinutes.get("Undertime"), row, 5); // Undertime = Column 5
-            }
-        }
-
-        // 🔒 Lock the table by rebuilding a non-editable model
+        // Lock the table by rebuilding a non-editable model
         @SuppressWarnings("rawtypes")
         Vector data = model.getDataVector(); // don't cast to Vector<Vector<Object>> to avoid build error
 
@@ -413,60 +393,46 @@ public class Attendance extends JFrame {
     }//GEN-LAST:event_updateAttendanceButtonActionPerformed
 
     private void jButtonSaveActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButtonSaveActionPerformed
+    // Commit active cell edit first; otherwise JTable may keep old value.
+    if (jTableAttendance.isEditing() && jTableAttendance.getCellEditor() != null) {
+        jTableAttendance.getCellEditor().stopCellEditing();
+    }
+
     DefaultTableModel model = (DefaultTableModel) jTableAttendance.getModel();
     List<AttendanceRecord> updatedRecords = new ArrayList<>();
 
-    // Extract employee ID from label (e.g., "Employee ID: 10034")
-    String labelText = employeeIDLabel.getText().trim();
-    String empNo = labelText.replace("Employee ID:", "").trim();
+    String activeEmpNo = this.empNo;
 
-    // Optional: Name labels if needed
-    String firstName = "";
-    String lastName = "";
-
-    // Build updated records from Time IN/OUT
+    // Build domain records from editable table values.
     for (int row = 0; row < model.getRowCount(); row++) {
     String date = model.getValueAt(row, 0).toString().trim();
     String logIn = model.getValueAt(row, 1).toString().trim();
     String logOut = model.getValueAt(row, 2).toString().trim();
-
-    
-    repository.EmployeeRepository empRepo = new repository.EmployeeRepository();
-    var employee = empRepo.findById(Integer.parseInt(empNo)).orElse(null);
-    
-    String fName = (employee != null) ? employee.getFirstName() : "";
-    String lName = (employee != null) ? employee.getLastName() : "";
-
-    AttendanceRecord record = new AttendanceRecord(empNo, lName, fName, date, logIn, logOut);
-    updatedRecords.add(record);
+    updatedRecords.add(new AttendanceRecord(activeEmpNo, "", "", date, logIn, logOut));
 }
      
     try {
-        AttendanceRepository attRepo = new AttendanceRepository();
-        boolean success = attRepo.update(updatedRecords);
+        boolean success = attendanceService.updateAttendanceRecords(activeEmpNo, updatedRecords);
         
         if (success) {
             JOptionPane.showMessageDialog(this, "Records saved and Overtime recalculated.");
 
             // FIX: Refresh the entire table data from the source to ensure 
             // the service sees the NEW saved values for calculation.
-            loadAttendanceRecords(empNo, startDateLabel.getDate().toInstant().atZone(java.time.ZoneId.systemDefault()).toLocalDate(), 
-                                 endDateLabel.getDate().toInstant().atZone(java.time.ZoneId.systemDefault()).toLocalDate());
-            
-            // Re-trigger the calculation loop
-           
-            for (int row = 0; row < model.getRowCount(); row++) {
-                String date = model.getValueAt(row, 0).toString();
-                // Ensure this service method is what handles the math
-                Map<String, Double> results = attendanceService.computeDailyAttendanceMinutes(Integer.parseInt(empNo), date);
-                
-                model.setValueAt(results.get("Late"), row, 3);
-                model.setValueAt(results.get("Overtime"), row, 4); // This updates the OT column
-                model.setValueAt(results.get("Undertime"), row, 5);
-            }
+            LocalDate startDate = startDateLabel.getDate() != null
+                    ? startDateLabel.getDate().toInstant().atZone(java.time.ZoneId.systemDefault()).toLocalDate()
+                    : LocalDate.now().minusMonths(1);
+            LocalDate endDate = endDateLabel.getDate() != null
+                    ? endDateLabel.getDate().toInstant().atZone(java.time.ZoneId.systemDefault()).toLocalDate()
+                    : LocalDate.now();
+
+            loadAttendanceRecords(activeEmpNo, startDate, endDate);
+        } else {
+            JOptionPane.showMessageDialog(this, "No matching records were updated.", "Save Warning", JOptionPane.WARNING_MESSAGE);
         }
     } catch (Exception e) {
-        e.printStackTrace();
+        JOptionPane.showMessageDialog(this, "Failed to save attendance records: " + e.getMessage(),
+                "Save Error", JOptionPane.ERROR_MESSAGE);
     }
     }//GEN-LAST:event_jButtonSaveActionPerformed
 
@@ -530,3 +496,4 @@ public class Attendance extends JFrame {
 
 
 }
+

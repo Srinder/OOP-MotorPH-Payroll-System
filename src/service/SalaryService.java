@@ -1,18 +1,24 @@
 package service;
 
+import com.itextpdf.text.Document;
+import com.itextpdf.text.Element;
+import com.itextpdf.text.PageSize;
+import com.itextpdf.text.pdf.PdfWriter;
 import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalTime;
-import java.time.YearMonth;
+import java.time.DayOfWeek;
+import java.awt.image.BufferedImage;
+import java.io.FileOutputStream;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.List;
-import java.util.Map;
-import java.util.TreeMap;
+import java.util.Set;
+import java.util.TreeSet;
 import model.AttendanceRecord;
 import model.Employee;
-import model.ICalculatable;
 import model.PayslipData;
 import repository.AttendanceRepository;
 import repository.SSSRepository;
@@ -31,9 +37,6 @@ public class SalaryService implements ISalaryService {
     @Override
     public double calculateSemiMonthlyNet(Employee emp, double hours, double overtimeHours) {
         double semiMonthlyGross = calculateGrossIncome(emp, hours, overtimeHours);
-        
-        // Convert to monthly to find the correct SSS/PhilHealth/PagIbig bracket
-        double monthlyEquivalent = semiMonthlyGross * 2; 
         
         double sssSemi = calculateSSS(semiMonthlyGross);
         double philHealthSemi = calculatePhilHealth(semiMonthlyGross);
@@ -61,7 +64,32 @@ public class SalaryService implements ISalaryService {
     
     @Override
     public double calculateSSS(double monthlyGross) {
-        return sssRepository.getPremiumByIncome(monthlyGross);
+        double sssPremium = 0.0;
+        for (String[] row : sssRepository.readContributionRows()) {
+            String minRaw = row[0] == null ? "" : row[0].toLowerCase();
+            String maxRaw = row[2] == null ? "" : row[2].toLowerCase();
+            double minBracket = parseSssValue(row[0]);
+            double premium = parseSssValue(row[3]);
+
+            if (minRaw.contains("below")) {
+                if (monthlyGross < minBracket) {
+                    sssPremium = premium;
+                    break;
+                }
+            } else if (maxRaw.contains("over")) {
+                if (monthlyGross > minBracket) {
+                    sssPremium = premium;
+                    break;
+                }
+            } else {
+                double maxBracket = parseSssValue(row[2]);
+                if (monthlyGross >= minBracket && monthlyGross <= maxBracket) {
+                    sssPremium = premium;
+                    break;
+                }
+            }
+        }
+        return sssPremium;
     }
 
     
@@ -109,8 +137,11 @@ public class SalaryService implements ISalaryService {
         long overtimeMinutes = 0L;
         long lateMinutes = 0L;
         long undertimeMinutes = 0L;
+        long absentDays = 0L;
+        long workingDaysInCutoff = 0L;
 
         List<AttendanceRecord> records = attendanceRepository.findByEmployeeId(empId);
+        Set<LocalDate> presentDays = new HashSet<>();
         for (AttendanceRecord record : records) {
             try {
                 LocalDate recordDate = LocalDate.parse(record.getDate(), CSV_DATE_FORMAT);
@@ -128,6 +159,8 @@ public class SalaryService implements ISalaryService {
                 if (!logOut.isAfter(logIn)) {
                     continue;
                 }
+
+                presentDays.add(recordDate);
 
                 LocalTime regularStart = logIn.isAfter(SHIFT_START) ? logIn : SHIFT_START;
                 LocalTime regularEnd = logOut.isBefore(SHIFT_END) ? logOut : SHIFT_END;
@@ -163,15 +196,27 @@ public class SalaryService implements ISalaryService {
             }
         }
 
+        for (LocalDate day = startDate; !day.isAfter(endDate); day = day.plusDays(1)) {
+            DayOfWeek dow = day.getDayOfWeek();
+            if (dow == DayOfWeek.SATURDAY || dow == DayOfWeek.SUNDAY) {
+                continue;
+            }
+            workingDaysInCutoff++;
+            if (!presentDays.contains(day)) {
+                absentDays++;
+            }
+        }
+
         double overtimeHours = overtimeMinutes / 60.0;
-        double semiMonthlyBasicSalary = emp.getBasicSalary() / 2;
+        double semiMonthlyBasicSalary = workingDaysInCutoff * 8 * emp.getHourlyRate();
         double overtimeAdjustment = overtimeHours * emp.getHourlyRate();
         double lateDeduction = (lateMinutes / 60.0) * emp.getHourlyRate();
         double undertimeDeduction = (undertimeMinutes / 60.0) * emp.getHourlyRate();
+        double absentDeduction = absentDays * 8 * emp.getHourlyRate();
         double lateAdjustment = -lateDeduction;
         double undertimeAdjustment = -undertimeDeduction;
+        double absentAdjustment = -absentDeduction;
         double gross = semiMonthlyBasicSalary + overtimeAdjustment;
-        double monthlyEquivalent = gross * 2;
 
         double sss = calculateSSS(gross);
         // Per cutoff, PhilHealth is based on the displayed basic salary (semi-monthly basic salary).
@@ -182,11 +227,11 @@ public class SalaryService implements ISalaryService {
         double statutoryDeductions = sss + philhealth + pagibig;
         double taxableIncome = gross - statutoryDeductions;
         double tax = calculateWithholdingTax(taxableIncome);
-        double totalDeductionsPositive = statutoryDeductions + tax + lateDeduction + undertimeDeduction;
+        double totalDeductionsPositive = statutoryDeductions + tax + lateDeduction + undertimeDeduction + absentDeduction;
         double totalDeductions = -totalDeductionsPositive;
         double netPay = gross + (emp.getTotalAllowances() / 2) + totalDeductions;
 
-        boolean hasAttendance = (regularMinutes + overtimeMinutes) > 0;
+        boolean hasAttendance = workingDaysInCutoff > 0;
         return new PayslipData(
                 "",
                 hasAttendance,
@@ -194,9 +239,11 @@ public class SalaryService implements ISalaryService {
                 overtimeMinutes,
                 lateMinutes,
                 undertimeMinutes,
+                absentDays,
                 overtimeAdjustment,
                 lateAdjustment,
                 undertimeAdjustment,
+                absentAdjustment,
                 gross,
                 sss,
                 philhealth,
@@ -210,36 +257,38 @@ public class SalaryService implements ISalaryService {
 
     @Override
     public List<LocalDate> getAvailableCutoffDates(String empId) {
-        Map<YearMonth, boolean[]> availabilityByMonth = new TreeMap<>();
+        Set<LocalDate> cutoffDates = new TreeSet<>();
         List<AttendanceRecord> records = attendanceRepository.findByEmployeeId(empId);
 
         for (AttendanceRecord record : records) {
             try {
                 LocalDate recordDate = LocalDate.parse(record.getDate(), CSV_DATE_FORMAT);
-                boolean[] availability = availabilityByMonth.computeIfAbsent(YearMonth.from(recordDate), k -> new boolean[2]);
-                if (recordDate.getDayOfMonth() <= 15) {
-                    availability[0] = true;
+                if (record.getLogIn() == null || record.getLogOut() == null
+                        || record.getLogIn().trim().isEmpty() || record.getLogOut().trim().isEmpty()) {
+                    continue;
+                }
+                LocalTime logIn = LocalTime.parse(record.getLogIn().trim(), TIME_FORMAT);
+                LocalTime logOut = LocalTime.parse(record.getLogOut().trim(), TIME_FORMAT);
+                if (!logOut.isAfter(logIn)) {
+                    continue;
+                }
+
+                int day = recordDate.getDayOfMonth();
+
+                if (day <= 5) {
+                    cutoffDates.add(recordDate.withDayOfMonth(15));
+                } else if (day <= 20) {
+                    cutoffDates.add(recordDate.withDayOfMonth(Math.min(30, recordDate.lengthOfMonth())));
                 } else {
-                    availability[1] = true;
+                    LocalDate nextMonth = recordDate.plusMonths(1);
+                    cutoffDates.add(nextMonth.withDayOfMonth(15));
                 }
             } catch (DateTimeParseException ignored) {
                 // Ignore malformed date rows.
             }
         }
 
-        List<LocalDate> cutoffDates = new ArrayList<>();
-        for (Map.Entry<YearMonth, boolean[]> entry : availabilityByMonth.entrySet()) {
-            YearMonth month = entry.getKey();
-            boolean[] availability = entry.getValue();
-
-            if (availability[0]) {
-                cutoffDates.add(month.atDay(15));
-            }
-            if (availability[1]) {
-                cutoffDates.add(month.atDay(Math.min(30, month.lengthOfMonth())));
-            }
-        }
-        return cutoffDates;
+        return new ArrayList<>(cutoffDates);
     }
 
     @Override
@@ -249,5 +298,44 @@ public class SalaryService implements ISalaryService {
             return new LocalDate[]{previousMonth.withDayOfMonth(21), cutoffDate.withDayOfMonth(5)};
         }
         return new LocalDate[]{cutoffDate.withDayOfMonth(6), cutoffDate.withDayOfMonth(20)};
+    }
+
+    @Override
+    public boolean exportPayslipPdf(BufferedImage image, String outputPath) {
+        if (image == null || outputPath == null || outputPath.trim().isEmpty()) {
+            return false;
+        }
+        try {
+            Document document = new Document(PageSize.A4.rotate(), 20, 20, 20, 20);
+            PdfWriter.getInstance(document, new FileOutputStream(outputPath));
+            document.open();
+
+            com.itextpdf.text.Image pdfImage = com.itextpdf.text.Image.getInstance(image, null);
+            float pageWidth = document.getPageSize().getWidth() - document.leftMargin() - document.rightMargin();
+            float pageHeight = document.getPageSize().getHeight() - document.topMargin() - document.bottomMargin();
+            pdfImage.scaleToFit(pageWidth, pageHeight);
+            pdfImage.setAlignment(Element.ALIGN_CENTER);
+            document.add(pdfImage);
+
+            document.close();
+            return true;
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    private double parseSssValue(String value) {
+        if (value == null) {
+            return 0.0;
+        }
+        String cleaned = value.replaceAll("[^\\d.]", "");
+        if (cleaned.isEmpty()) {
+            return 0.0;
+        }
+        try {
+            return Double.parseDouble(cleaned);
+        } catch (NumberFormatException ex) {
+            return 0.0;
+        }
     }
 }

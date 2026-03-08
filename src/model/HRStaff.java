@@ -39,5 +39,5 @@ public class HRStaff extends Employee {
     
     @Override
     public String getRole() {
-        return "ADMIN";}
+        return "HR";}
 }

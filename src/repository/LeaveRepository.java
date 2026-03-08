@@ -18,15 +18,9 @@ import java.util.List;
 
 public class LeaveRepository {
     private final String FILE_PATH = "data/leave_requests.csv";
+    private static final java.util.Set<String> KNOWN_STATUSES =
+            new java.util.HashSet<>(java.util.Arrays.asList("PENDING", "APPROVED", "REJECTED", "CANCELLED"));
 
-    public void saveRequest(String[] data) {
-        try (CSVWriter writer = new CSVWriter(new FileWriter(FILE_PATH, true))) {
-            writer.writeNext(data); // Writes 6 columns: ID, Type, Start, End, Reason, Status
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-    }
-    
     public boolean saveRequest(model.LeaveRequest request) {
     
     try (com.opencsv.CSVWriter writer = new com.opencsv.CSVWriter(new java.io.FileWriter(FILE_PATH, true))) {
@@ -69,8 +63,30 @@ public class LeaveRepository {
     }
     return false;
 }
+
+    public boolean updateStatusByDetails(int empId, String leaveType, String startDate, String endDate, String reason, String newStatus) {
+        List<model.LeaveRequest> allRequests = getAllRequests();
+        boolean recordFound = false;
+
+        for (model.LeaveRequest req : allRequests) {
+            if (req.getEmployeeId() == empId
+                    && req.getLeaveType().equalsIgnoreCase(leaveType)
+                    && req.getStartDate().equals(startDate)
+                    && req.getEndDate().equals(endDate)
+                    && req.getReason().equals(reason)) {
+                req.setStatus(newStatus);
+                recordFound = true;
+                break;
+            }
+        }
+
+        if (recordFound) {
+            return saveAllRequests(allRequests);
+        }
+        return false;
+    }
     
-    private boolean saveAllRequests(List<model.LeaveRequest> requests) {
+private boolean saveAllRequests(List<model.LeaveRequest> requests) {
     
     String filePath = "data/leave_requests.csv"; 
     
@@ -80,8 +96,8 @@ public class LeaveRepository {
                            req.getLeaveType() + "," +
                            req.getStartDate() + "," +
                            req.getEndDate() + "," +
-                           req.getStatus() + "," +
-                           req.getReason());
+                           req.getReason() + "," +
+                           req.getStatus());
         }
         return true;
     } catch (java.io.IOException e) {
@@ -90,21 +106,41 @@ public class LeaveRepository {
     }
 }
 
-    public java.util.List<model.LeaveRequest> getAllRequests() {
+public java.util.List<model.LeaveRequest> getAllRequests() {
     java.util.List<model.LeaveRequest> list = new java.util.ArrayList<>();
     try (com.opencsv.CSVReader reader = new com.opencsv.CSVReader(new java.io.FileReader(FILE_PATH))) {
-        reader.readNext(); // Skip header
         String[] line;
         while ((line = reader.readNext()) != null) {
             if (line.length >= 6) {
-                // Convert raw CSV line into a Model object
+                String first = line[0] == null ? "" : line[0].trim();
+                // Skip header if present.
+                if (!first.matches("\\d+")) {
+                    continue;
+                }
+
+                String col5 = line[4] == null ? "" : line[4].trim();
+                String col6 = line[5] == null ? "" : line[5].trim();
+
+                String reason;
+                String status;
+                // Support both legacy orders:
+                // 1) ...,reason,status
+                // 2) ...,status,reason
+                if (KNOWN_STATUSES.contains(col5.toUpperCase())) {
+                    status = col5;
+                    reason = col6;
+                } else {
+                    reason = col5;
+                    status = col6;
+                }
+
                 list.add(new model.LeaveRequest(
-                    Integer.parseInt(line[0]), // ID
-                    line[1],                   // Type
-                    line[2],                   // Start
-                    line[3],                   // End
-                    line[4],                   // Reason
-                    line[5]                    // Status
+                    Integer.parseInt(first),   // ID
+                    line[1].trim(),            // Type
+                    line[2].trim(),            // Start
+                    line[3].trim(),            // End
+                    reason,                    // Reason
+                    status                     // Status
                 ));
             }
         }

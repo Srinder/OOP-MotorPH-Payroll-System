@@ -1,6 +1,11 @@
-EmployeeID,LeaveType,StartDate,EndDate,Reason,Status
-10001,Vacation,03/01/2026,03/05/2026,Family trip,Approved
-10001,Sick,03/10/2026,03/10/2026,Flu,Pending
-10002,Emergency,03/12/2026,03/13/2026,Home repairs,Rejected
-"10001","Vacation","03/01/2026","03/04/2026","Going to Boracay","Pending"
-"10001","Vacation","03/03/2026","03/06/2026","Trip to Cebu","Pending"
+10001,Vacation,3/1/2026,3/5/2026,Family trip,Approved
+10001,Sick,3/10/2026,3/10/2026,Flu,Approved
+10002,Emergency,3/12/2026,3/13/2026,Home repairs,Pending
+10001,Vacation,3/1/2026,3/4/2026,Going to Boracay,Approved
+10001,Vacation,3/3/2026,3/6/2026,Trip to Cebu,Approved
+10001,Sick,3/6/2026,3/6/2026,SL,Cancelled
+10001,Vacation,3/16/2026,3/16/2026,Family Reunion,Pending
+10001,Vacation,3/26/2026,3/27/2026,Going to province,Pending
+10005,Vacation,03/23/2026,03/27/2026,going to brother's wedding,Approved
+10001,Vacation,03/25/2026,03/26/2026,Need to attend my kid's graduation,Approved
+10001,Vacation,04/16/2026,04/17/2026,Celebrate birthday,Approved

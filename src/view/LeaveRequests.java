@@ -4,7 +4,6 @@ package view;
 
 import service.ILeaveManagement;
 import service.LeaveManagement;
-import repository.LeaveRepository;
 import model.LeaveRequest;
 /**
  *
@@ -13,15 +12,21 @@ import model.LeaveRequest;
 public class LeaveRequests extends javax.swing.JFrame {
     
     private final service.ILeaveManagement leaveService = new service.LeaveManagement(); 
-    private final repository.LeaveRepository repo = new repository.LeaveRepository();
+    private boolean statusOnlyMode = false;
+    private boolean tableSelectionConfigured = false;
     private int currentEmployeeID;
-    private model.Employee currentUser;
     
 
     
     public LeaveRequests(int empId) {
+        this(empId, false);
+    }
+
+    public LeaveRequests(int empId, boolean statusOnlyMode) {
         this.currentEmployeeID = empId;
+        this.statusOnlyMode = statusOnlyMode;
         initComponents(); 
+        WindowNavigation.installReturnToMainMenuOnClose(this);
         
         
 
@@ -36,99 +41,277 @@ public class LeaveRequests extends javax.swing.JFrame {
        
         loadTableData();      
         updateSummaryCards(); 
+        updateCancelButtonState();
+        applyEntryModeRestrictions();
     }
-    
-    private void tblLeaveHistoryMouseClicked(java.awt.event.MouseEvent evt) {
-    if (this.currentUser.getRole().equalsIgnoreCase("Admin")) {
-        int selectedRow = tblLeaveHistory.getSelectedRow();
-        if (selectedRow != -1) {
-            // 1. Extract data from the selected row
-            String empId = tblLeaveHistory.getValueAt(selectedRow, 0).toString();
-            String type = tblLeaveHistory.getValueAt(selectedRow, 1).toString();
-            String start = tblLeaveHistory.getValueAt(selectedRow, 2).toString();
-            String end = tblLeaveHistory.getValueAt(selectedRow, 3).toString();
-            String status = tblLeaveHistory.getValueAt(selectedRow, 5).toString();
-            String reason = tblLeaveHistory.getValueAt(selectedRow, 6).toString();
 
-            // 2. Open the Approval Dialog
-            showApprovalDialog(empId, type, start, end, status, reason);
+    private void applyEntryModeRestrictions() {
+        if (statusOnlyMode) {
+            // View-only mode when opened from EmployeeTable -> Leave.
+            lblSubmitNewRequest.setVisible(false);
+            jPanel1.setVisible(false);
+            btnCancel.setVisible(false);
+            btnSubmit.setVisible(false);
+            btnApprove.setVisible(true);
+            btnDeny.setVisible(true);
+
+            // Collapse hidden left panel from GroupLayout sizing.
+            java.awt.LayoutManager lm = getContentPane().getLayout();
+            if (lm instanceof javax.swing.GroupLayout) {
+                javax.swing.GroupLayout gl = (javax.swing.GroupLayout) lm;
+                gl.setHonorsVisibility(jPanel1, Boolean.TRUE);
+                gl.setHonorsVisibility(lblSubmitNewRequest, Boolean.TRUE);
+            }
+            pack();
+            setLocationRelativeTo(null);
+        } else {
+            btnApprove.setVisible(false);
+            btnDeny.setVisible(false);
         }
     }
+
+    private void configureTableSelectionBehavior() {
+        tblLeaveHistory.setRowSelectionAllowed(true);
+        tblLeaveHistory.setColumnSelectionAllowed(false);
+        tblLeaveHistory.setCellSelectionEnabled(false);
+        tblLeaveHistory.setSelectionMode(
+                statusOnlyMode
+                        ? javax.swing.ListSelectionModel.MULTIPLE_INTERVAL_SELECTION
+                        : javax.swing.ListSelectionModel.SINGLE_SELECTION);
+        tblLeaveHistory.setAutoResizeMode(javax.swing.JTable.AUTO_RESIZE_ALL_COLUMNS);
+        tblLeaveHistory.setRowHeight(24);
+        tblLeaveHistory.setSelectionBackground(new java.awt.Color(14, 49, 113));
+        tblLeaveHistory.setSelectionForeground(java.awt.Color.WHITE);
+        tblLeaveHistory.setFocusable(true);
+        tblLeaveHistory.setRequestFocusEnabled(true);
+
+        javax.swing.table.DefaultTableCellRenderer fullRowRenderer = new javax.swing.table.DefaultTableCellRenderer() {
+            @Override
+            public java.awt.Component getTableCellRendererComponent(
+                    javax.swing.JTable table,
+                    Object value,
+                    boolean isSelected,
+                    boolean hasFocus,
+                    int row,
+                    int column) {
+                java.awt.Component c = super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
+                boolean rowSelected = table.getSelectedRow() == row;
+                if (rowSelected) {
+                    c.setBackground(table.getSelectionBackground());
+                    c.setForeground(table.getSelectionForeground());
+                } else {
+                    c.setBackground(table.getBackground());
+                    c.setForeground(table.getForeground());
+                }
+                return c;
+            }
+        };
+        for (int i = 0; i < tblLeaveHistory.getColumnCount(); i++) {
+            if (statusOnlyMode && i == 0) {
+                // Keep native checkbox renderer for selection column.
+                continue;
+            }
+            tblLeaveHistory.getColumnModel().getColumn(i).setCellRenderer(fullRowRenderer);
+        }
+
+        // Header + spacing
+        if (statusOnlyMode) {
+            tblLeaveHistory.getColumnModel().getColumn(0).setHeaderValue("Select");
+            tblLeaveHistory.getColumnModel().getColumn(1).setHeaderValue("EID");
+        } else {
+            tblLeaveHistory.getColumnModel().getColumn(0).setHeaderValue("EID");
+        }
+        tblLeaveHistory.getTableHeader().repaint();
+
+        if (statusOnlyMode) {
+            tblLeaveHistory.getColumnModel().getColumn(0).setPreferredWidth(55);  // Select
+            tblLeaveHistory.getColumnModel().getColumn(1).setPreferredWidth(70);  // EID
+            tblLeaveHistory.getColumnModel().getColumn(2).setPreferredWidth(92);  // Leave Type
+            tblLeaveHistory.getColumnModel().getColumn(3).setPreferredWidth(88);  // Start Date
+            tblLeaveHistory.getColumnModel().getColumn(4).setPreferredWidth(88);  // End Date
+            tblLeaveHistory.getColumnModel().getColumn(5).setPreferredWidth(50);  // Days
+            tblLeaveHistory.getColumnModel().getColumn(6).setPreferredWidth(90);  // Status
+            tblLeaveHistory.getColumnModel().getColumn(7).setPreferredWidth(210); // Reason
+        } else {
+            tblLeaveHistory.getColumnModel().getColumn(0).setPreferredWidth(70);  // EID
+            tblLeaveHistory.getColumnModel().getColumn(1).setPreferredWidth(92);  // Leave Type
+            tblLeaveHistory.getColumnModel().getColumn(2).setPreferredWidth(88);  // Start Date
+            tblLeaveHistory.getColumnModel().getColumn(3).setPreferredWidth(88);  // End Date
+            tblLeaveHistory.getColumnModel().getColumn(4).setPreferredWidth(50);  // Days
+            tblLeaveHistory.getColumnModel().getColumn(5).setPreferredWidth(90);  // Status
+            tblLeaveHistory.getColumnModel().getColumn(6).setPreferredWidth(230); // Reason
+        }
+
+        if (!tableSelectionConfigured) {
+            tblLeaveHistory.addMouseListener(new java.awt.event.MouseAdapter() {
+                @Override
+                public void mouseClicked(java.awt.event.MouseEvent evt) {
+                    int row = tblLeaveHistory.rowAtPoint(evt.getPoint());
+                    if (row >= 0) {
+                        tblLeaveHistory.requestFocusInWindow();
+                        tblLeaveHistory.setRowSelectionInterval(row, row);
+                    }
+                }
+            });
+
+            tblLeaveHistory.getSelectionModel().addListSelectionListener(e -> {
+                if (!e.getValueIsAdjusting()) {
+                    updateCancelButtonState();
+                }
+            });
+            tableSelectionConfigured = true;
+        }
+    }
+
+    private void updateCancelButtonState() {
+        boolean hasSelection = tblLeaveHistory.getSelectedRow() != -1;
+        btnCancel.setText(hasSelection ? "Cancel Selected Request" : "Cancel Request");
     }
     
-    private void showApprovalDialog(String id, String type, String s, String e, String status, String reason) {
-    String message = "Employee ID: " + id + "\nType: " + type + 
-                     "\nDates: " + s + " to " + e + 
-                     "\n\nReason: " + reason;
-
-    Object[] options = {"Approve", "Decline", "Cancel"};
-    int choice = javax.swing.JOptionPane.showOptionDialog(this, message, 
-            "Review Leave Request", javax.swing.JOptionPane.YES_NO_CANCEL_OPTION,
-            javax.swing.JOptionPane.QUESTION_MESSAGE, null, options, options[2]);
-
-    if (choice == 0) updateStatus(id, s, "Approved");
-    else if (choice == 1) updateStatus(id, s, "Rejected");
-}
-
-private void updateStatus(String empId, String startDate, String newStatus) {
-    // This updates the CSV and refreshes  credit cards
-    if (leaveService.updateLeaveStatus(Integer.parseInt(empId), startDate, newStatus)) {
-        loadTableData();
-        updateSummaryCards(); // Refresh the 20/10/10 balances
-    }
-}
-
     private void loadTableData() {
-        // 1. Get the UI Table Model
-        javax.swing.table.DefaultTableModel model = (javax.swing.table.DefaultTableModel) tblLeaveHistory.getModel();
-        model.setRowCount(0); // Clear old rows
+        javax.swing.table.DefaultTableModel model = createLeaveHistoryTableModel();
+        tblLeaveHistory.setModel(model);
 
+        String selectedFilter = cmbStatusFilter.getSelectedItem() == null
+                ? "All"
+                : cmbStatusFilter.getSelectedItem().toString();
         // 2. Request data from the Service
-        java.util.List<model.LeaveRequest> history = leaveService.getEmployeeLeaveHistory(this.currentEmployeeID);
+        java.util.List<model.LeaveRequest> history = leaveService.getEmployeeLeaveHistoryFiltered(this.currentEmployeeID, selectedFilter);
 
         // 3. Fill the table using the Model's getters
         for (model.LeaveRequest req : history) {
-            // Calculate duration for the 'Days' column using service logic
-            double days = leaveService.calculateLeaveDays(req.getStartDate(), req.getEndDate());
+            int days = leaveService.getLeaveDaysInt(req.getStartDate(), req.getEndDate());
 
-            model.addRow(new Object[]{
-                req.getEmployeeId(), 
-                req.getLeaveType(),   
-                req.getStartDate(),   
-                req.getEndDate(),     
-                (int)days,            
-                req.getStatus(),      
-                req.getReason()       
-            });
+            if (statusOnlyMode) {
+                model.addRow(new Object[]{
+                    Boolean.FALSE,
+                    req.getEmployeeId(),
+                    req.getLeaveType(),
+                    leaveService.formatDateForDisplay(req.getStartDate()),
+                    leaveService.formatDateForDisplay(req.getEndDate()),
+                    days,
+                    req.getStatus(),
+                    req.getReason()
+                });
+            } else {
+                model.addRow(new Object[]{
+                    req.getEmployeeId(),
+                    req.getLeaveType(),
+                    leaveService.formatDateForDisplay(req.getStartDate()),
+                    leaveService.formatDateForDisplay(req.getEndDate()),
+                    days,
+                    req.getStatus(),
+                    req.getReason()
+                });
+            }
+        }
+        configureTableSelectionBehavior();
+    }
+
+    private javax.swing.table.DefaultTableModel createLeaveHistoryTableModel() {
+        if (statusOnlyMode) {
+            return new javax.swing.table.DefaultTableModel(
+                    new Object[][]{},
+                    new String[]{"Select", "EID", "Leave Type", "Start Date", "End Date", "Days", "Status", "Reason"}) {
+                @Override
+                public Class<?> getColumnClass(int columnIndex) {
+                    if (columnIndex == 0) {
+                        return Boolean.class;
+                    }
+                    return Object.class;
+                }
+
+                @Override
+                public boolean isCellEditable(int row, int column) {
+                    return column == 0;
+                }
+            };
+        }
+        return new javax.swing.table.DefaultTableModel(
+                new Object[][]{},
+                new String[]{"EID", "Leave Type", "Start Date", "End Date", "Days", "Status", "Reason"}) {
+            @Override
+            public boolean isCellEditable(int row, int column) {
+                return false;
+            }
+        };
+    }
+
+    private int getColumnIndexEid() { return statusOnlyMode ? 1 : 0; }
+    private int getColumnIndexLeaveType() { return statusOnlyMode ? 2 : 1; }
+    private int getColumnIndexStartDate() { return statusOnlyMode ? 3 : 2; }
+    private int getColumnIndexEndDate() { return statusOnlyMode ? 4 : 3; }
+    private int getColumnIndexStatus() { return statusOnlyMode ? 6 : 5; }
+    private int getColumnIndexReason() { return statusOnlyMode ? 7 : 6; }
+
+    private void processSelectedRequests(String targetStatus) {
+        if (!statusOnlyMode) {
+            return;
+        }
+
+        // Commit active checkbox edit before reading table values.
+        if (tblLeaveHistory.isEditing() && tblLeaveHistory.getCellEditor() != null) {
+            tblLeaveHistory.getCellEditor().stopCellEditing();
+        }
+
+        javax.swing.table.DefaultTableModel model = (javax.swing.table.DefaultTableModel) tblLeaveHistory.getModel();
+        java.util.Set<Integer> selectedRows = new java.util.LinkedHashSet<>();
+
+        // Primary: checkbox selections.
+        for (int row = 0; row < model.getRowCount(); row++) {
+            Object selected = model.getValueAt(row, 0);
+            if (Boolean.TRUE.equals(selected)) {
+                selectedRows.add(row);
+            }
+        }
+
+        // Fallback: currently highlighted rows (if user multi-selected rows).
+        for (int row : tblLeaveHistory.getSelectedRows()) {
+            selectedRows.add(row);
+        }
+
+        if (selectedRows.isEmpty()) {
+            javax.swing.JOptionPane.showMessageDialog(this, "Select at least one request.");
+            return;
+        }
+
+        java.util.List<model.LeaveRequest> selectedRequests = new java.util.ArrayList<>();
+        for (Integer row : selectedRows) {
+            int empId;
+            try {
+                empId = Integer.parseInt(String.valueOf(model.getValueAt(row, getColumnIndexEid())).trim());
+            } catch (Exception ex) {
+                continue;
+            }
+            selectedRequests.add(new model.LeaveRequest(
+                    empId,
+                    String.valueOf(model.getValueAt(row, getColumnIndexLeaveType())),
+                    String.valueOf(model.getValueAt(row, getColumnIndexStartDate())),
+                    String.valueOf(model.getValueAt(row, getColumnIndexEndDate())),
+                    String.valueOf(model.getValueAt(row, getColumnIndexReason())),
+                    String.valueOf(model.getValueAt(row, getColumnIndexStatus()))
+            ));
+        }
+        int updated = leaveService.processStatusUpdates(selectedRequests, targetStatus);
+
+        loadTableData();
+        updateSummaryCards();
+        if (updated == 0) {
+            javax.swing.JOptionPane.showMessageDialog(this, "No pending requests were updated.");
         }
     }
 
     private void updateSummaryCards() {
-        // 1. Get individual balances from the Service
-        double vacation = leaveService.getRemainingLeaveCredits(this.currentEmployeeID, "Vacation");
-        double sick = leaveService.getRemainingLeaveCredits(this.currentEmployeeID, "Sick");
-        double emergency = leaveService.getRemainingLeaveCredits(this.currentEmployeeID, "Emergency");
-        
-        // 2. Calculate the Total Credits sum
-        double total = vacation + sick + emergency;
-
-        // 3. Update the Labels in your design
-        lblVacationCreditsValue.setText(String.valueOf((int)vacation));
-        lblSickLeaveCreditsValue.setText(String.valueOf((int)sick));
-        lblEmergencyLeaveCreditsValue.setText(String.valueOf((int)emergency));
-        lblTotalCreditsValue.setText(String.valueOf((int)total));
+        int[] summary = leaveService.getLeaveCreditsSummary(this.currentEmployeeID);
+        lblVacationCreditsValue.setText(String.valueOf(summary[0]));
+        lblSickLeaveCreditsValue.setText(String.valueOf(summary[1]));
+        lblEmergencyLeaveCreditsValue.setText(String.valueOf(summary[2]));
+        lblTotalCreditsValue.setText(String.valueOf(summary[3]));
     }
 
     private void calculateDays() {
-        if (jcStartDateValue.getDate() != null && jcEndDateValue.getDate() != null) {
-            // Use MM/dd/yyyy to match your Service's DateTimeFormatter
-            java.text.SimpleDateFormat sdf = new java.text.SimpleDateFormat("MM/dd/yyyy");
-            String s = sdf.format(jcStartDateValue.getDate());
-            String e = sdf.format(jcEndDateValue.getDate());
-            
-            double days = leaveService.calculateLeaveDays(s, e);
-            lblTotalDaysValue.setText(String.valueOf((int)days));
-        }
+        int days = leaveService.getLeaveDaysInt(jcStartDateValue.getDate(), jcEndDateValue.getDate());
+        lblTotalDaysValue.setText(String.valueOf(days));
     }
 
     private void clearForm() {
@@ -137,6 +320,7 @@ private void updateStatus(String empId, String startDate, String newStatus) {
         jcEndDateValue.setDate(null);
         txtReasonValue.setText("");
         lblTotalDaysValue.setText("0");
+        updateCancelButtonState();
     }  
 
     /**
@@ -176,8 +360,12 @@ private void updateStatus(String empId, String startDate, String newStatus) {
         lblTotalCredits = new javax.swing.JLabel();
         lblTotalCreditsValue = new javax.swing.JLabel();
         pnlLeaveHistory = new javax.swing.JPanel();
+        lblStatusFilter = new javax.swing.JLabel();
+        cmbStatusFilter = new javax.swing.JComboBox<>();
         jScrollPane1 = new javax.swing.JScrollPane();
         tblLeaveHistory = new javax.swing.JTable();
+        btnApprove = new javax.swing.JButton();
+        btnDeny = new javax.swing.JButton();
         btnExit = new javax.swing.JButton();
         lblMyLeaveHistory = new javax.swing.JLabel();
         lblSubmitNewRequest = new javax.swing.JLabel();
@@ -225,11 +413,6 @@ private void updateStatus(String empId, String startDate, String newStatus) {
         jPanel1.add(lblReason, new org.netbeans.lib.awtextra.AbsoluteConstraints(30, 230, 110, -1));
 
         txtReasonValue.setBorder(javax.swing.BorderFactory.createLineBorder(new java.awt.Color(204, 204, 204)));
-        txtReasonValue.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                txtReasonValueActionPerformed(evt);
-            }
-        });
         jPanel1.add(txtReasonValue, new org.netbeans.lib.awtextra.AbsoluteConstraints(30, 260, 280, 150));
 
         btnSubmit.setText("Submit Request");
@@ -238,7 +421,7 @@ private void updateStatus(String empId, String startDate, String newStatus) {
                 btnSubmitActionPerformed(evt);
             }
         });
-        jPanel1.add(btnSubmit, new org.netbeans.lib.awtextra.AbsoluteConstraints(200, 430, -1, -1));
+        jPanel1.add(btnSubmit, new org.netbeans.lib.awtextra.AbsoluteConstraints(145, 430, 168, -1));
 
         btnCancel.setText("Cancel Request");
         btnCancel.addActionListener(new java.awt.event.ActionListener() {
@@ -246,7 +429,7 @@ private void updateStatus(String empId, String startDate, String newStatus) {
                 btnCancelActionPerformed(evt);
             }
         });
-        jPanel1.add(btnCancel, new org.netbeans.lib.awtextra.AbsoluteConstraints(200, 460, 113, -1));
+        jPanel1.add(btnCancel, new org.netbeans.lib.awtextra.AbsoluteConstraints(145, 460, 168, -1));
 
         jPanel2.setBorder(javax.swing.BorderFactory.createLineBorder(new java.awt.Color(204, 204, 204)));
 
@@ -402,20 +585,61 @@ private void updateStatus(String empId, String startDate, String newStatus) {
         jScrollPane1.setViewportView(tblLeaveHistory);
         tblLeaveHistory.getColumnModel().getSelectionModel().setSelectionMode(javax.swing.ListSelectionModel.SINGLE_SELECTION);
 
+        lblStatusFilter.setText("Filter:");
+
+        cmbStatusFilter.setModel(new javax.swing.DefaultComboBoxModel<>(new String[] { "All", "Pending", "Approved", "Rejected", "Cancelled" }));
+        cmbStatusFilter.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                cmbStatusFilterActionPerformed(evt);
+            }
+        });
+
+        btnApprove.setText("Approve");
+        btnApprove.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                btnApproveActionPerformed(evt);
+            }
+        });
+
+        btnDeny.setText("Deny");
+        btnDeny.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                btnDenyActionPerformed(evt);
+            }
+        });
+
         javax.swing.GroupLayout pnlLeaveHistoryLayout = new javax.swing.GroupLayout(pnlLeaveHistory);
         pnlLeaveHistory.setLayout(pnlLeaveHistoryLayout);
         pnlLeaveHistoryLayout.setHorizontalGroup(
             pnlLeaveHistoryLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, pnlLeaveHistoryLayout.createSequentialGroup()
                 .addContainerGap()
-                .addComponent(jScrollPane1)
+                .addGroup(pnlLeaveHistoryLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING)
+                    .addGroup(javax.swing.GroupLayout.Alignment.LEADING, pnlLeaveHistoryLayout.createSequentialGroup()
+                        .addComponent(lblStatusFilter)
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                        .addComponent(cmbStatusFilter, javax.swing.GroupLayout.PREFERRED_SIZE, 140, javax.swing.GroupLayout.PREFERRED_SIZE)
+                        .addGap(0, 0, Short.MAX_VALUE))
+                    .addGroup(pnlLeaveHistoryLayout.createSequentialGroup()
+                        .addComponent(btnApprove)
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                        .addComponent(btnDeny))
+                    .addComponent(jScrollPane1))
                 .addContainerGap())
         );
         pnlLeaveHistoryLayout.setVerticalGroup(
             pnlLeaveHistoryLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, pnlLeaveHistoryLayout.createSequentialGroup()
                 .addContainerGap()
-                .addComponent(jScrollPane1, javax.swing.GroupLayout.DEFAULT_SIZE, 230, Short.MAX_VALUE)
+                .addGroup(pnlLeaveHistoryLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                    .addComponent(lblStatusFilter)
+                    .addComponent(cmbStatusFilter, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addComponent(jScrollPane1, javax.swing.GroupLayout.DEFAULT_SIZE, 164, Short.MAX_VALUE)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addGroup(pnlLeaveHistoryLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                    .addComponent(btnApprove)
+                    .addComponent(btnDeny))
                 .addContainerGap())
         );
 
@@ -506,12 +730,7 @@ private void updateStatus(String empId, String startDate, String newStatus) {
         pack();
     }// </editor-fold>//GEN-END:initComponents
 
-    private void txtReasonValueActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_txtReasonValueActionPerformed
-        // TODO add your handling code here:
-    }//GEN-LAST:event_txtReasonValueActionPerformed
-
     private void btnSubmitActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnSubmitActionPerformed
-        // TODO add your handling code here:
     try {
         // 1. Capture inputs from UI components
         String type = jcLeaveTypeValue.getSelectedItem().toString();
@@ -525,10 +744,8 @@ private void updateStatus(String empId, String startDate, String newStatus) {
             return;
         }
 
-        // 3. Format dates for the CSV
-        java.text.SimpleDateFormat sdf = new java.text.SimpleDateFormat("MM/dd/yyyy");
-        String startDateStr = sdf.format(start);
-        String endDateStr = sdf.format(end);
+        String startDateStr = leaveService.normalizeDateForStorage(start);
+        String endDateStr = leaveService.normalizeDateForStorage(end);
 
         // 4. Use Service to apply leave (returns true if within 15-day limit)
         boolean success = leaveService.applyLeave(
@@ -555,34 +772,75 @@ private void updateStatus(String empId, String startDate, String newStatus) {
     }//GEN-LAST:event_btnSubmitActionPerformed
 
     private void jcStartDateValuePropertyChange(java.beans.PropertyChangeEvent evt) {//GEN-FIRST:event_jcStartDateValuePropertyChange
-        // TODO add your handling code here:
         calculateDays();
     }//GEN-LAST:event_jcStartDateValuePropertyChange
 
     private void jcEndDateValuePropertyChange(java.beans.PropertyChangeEvent evt) {//GEN-FIRST:event_jcEndDateValuePropertyChange
-        // TODO add your handling code here:
         calculateDays();
     }//GEN-LAST:event_jcEndDateValuePropertyChange
 
     private void btnCancelActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnCancelActionPerformed
-        // TODO add your handling code here:
-        // 1. Clear all input fields
-        jcLeaveTypeValue.setSelectedIndex(0);
-        jcStartDateValue.setDate(null);
-        jcEndDateValue.setDate(null);
-        txtReasonValue.setText("");
-    
-        // 2. Reset the calculated days label
-        lblTotalDaysValue.setText("0");
-    
-        // 3. Show a brief confirmation (Optional)
-        System.out.println("Form cleared by user.");
+        int selectedRow = tblLeaveHistory.getSelectedRow();
+
+        if (selectedRow != -1) {
+            int requestEmployeeId;
+            try {
+                requestEmployeeId = Integer.parseInt(String.valueOf(tblLeaveHistory.getValueAt(selectedRow, getColumnIndexEid())).trim());
+            } catch (Exception ex) {
+                javax.swing.JOptionPane.showMessageDialog(this, "Unable to read selected request.");
+                return;
+            }
+            String requestStartDate = String.valueOf(tblLeaveHistory.getValueAt(selectedRow, getColumnIndexStartDate()));
+            String requestStatus = String.valueOf(tblLeaveHistory.getValueAt(selectedRow, getColumnIndexStatus()));
+
+            int confirm = javax.swing.JOptionPane.showConfirmDialog(
+                    this,
+                    "Cancel this pending leave request?",
+                    "Confirm Cancel",
+                    javax.swing.JOptionPane.YES_NO_OPTION);
+            if (confirm == javax.swing.JOptionPane.YES_OPTION) {
+                int result = leaveService.cancelOwnPendingLeave(
+                        this.currentEmployeeID,
+                        requestEmployeeId,
+                        requestStartDate,
+                        requestStatus);
+                if (result == ILeaveManagement.CANCEL_SUCCESS) {
+                    loadTableData();
+                    updateSummaryCards();
+                    clearForm();
+                    tblLeaveHistory.clearSelection();
+                } else {
+                    if (result == ILeaveManagement.CANCEL_NOT_OWNER) {
+                        javax.swing.JOptionPane.showMessageDialog(this, "You can only cancel your own leave requests.");
+                    } else if (result == ILeaveManagement.CANCEL_NOT_PENDING) {
+                        javax.swing.JOptionPane.showMessageDialog(this, "Only pending requests can be canceled.");
+                    } else {
+                        javax.swing.JOptionPane.showMessageDialog(this, "Unable to cancel the selected request.");
+                    }
+                }
+            }
+            return;
+        }
+
+        clearForm();
     }//GEN-LAST:event_btnCancelActionPerformed
 
     private void btnExitActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnExitActionPerformed
 
     this.dispose(); 
     }//GEN-LAST:event_btnExitActionPerformed
+
+    private void btnApproveActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnApproveActionPerformed
+        processSelectedRequests("Approved");
+    }//GEN-LAST:event_btnApproveActionPerformed
+
+    private void btnDenyActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnDenyActionPerformed
+        processSelectedRequests("Rejected");
+    }//GEN-LAST:event_btnDenyActionPerformed
+
+    private void cmbStatusFilterActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_cmbStatusFilterActionPerformed
+        loadTableData();
+    }//GEN-LAST:event_cmbStatusFilterActionPerformed
 
     /**
      * @param args the command line arguments
@@ -620,9 +878,12 @@ private void updateStatus(String empId, String startDate, String newStatus) {
     }
 
     // Variables declaration - do not modify//GEN-BEGIN:variables
+    private javax.swing.JButton btnApprove;
     private javax.swing.JButton btnCancel;
+    private javax.swing.JButton btnDeny;
     private javax.swing.JButton btnExit;
     private javax.swing.JButton btnSubmit;
+    private javax.swing.JComboBox<String> cmbStatusFilter;
     private javax.swing.JPanel jPanel1;
     private javax.swing.JPanel jPanel2;
     private javax.swing.JScrollPane jScrollPane1;
@@ -641,6 +902,7 @@ private void updateStatus(String empId, String startDate, String newStatus) {
     private javax.swing.JLabel lblSickLeaveCreditsValue;
     private javax.swing.JLabel lblStartDate;
     private javax.swing.JLabel lblSubmitNewRequest;
+    private javax.swing.JLabel lblStatusFilter;
     private javax.swing.JLabel lblTotalCredits;
     private javax.swing.JLabel lblTotalCreditsValue;
     private javax.swing.JLabel lblTotalDays;

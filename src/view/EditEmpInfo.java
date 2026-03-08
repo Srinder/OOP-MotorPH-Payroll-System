@@ -1,15 +1,13 @@
 package view;
 
-import repository.EmployeeRepository;
 import model.Employee;
 import javax.swing.JOptionPane;
-import java.util.List;
 import java.util.Optional;
 import javax.swing.JTextField;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent; 
-import javax.swing.table.DefaultTableModel;
-import model.User;
+import service.IEmployeeManagementService;
+import service.EmployeeManagementService;
 
 public class EditEmpInfo extends javax.swing.JFrame {
 
@@ -17,28 +15,145 @@ public class EditEmpInfo extends javax.swing.JFrame {
     private Employee employeeData;
     private boolean readOnly;
     private JTextField FirstName;
+    private final boolean openedFromEmployeeTable;
+    private final IEmployeeManagementService employeeService;
 
    public EditEmpInfo(int employeeNumber, boolean isReadOnly) {
+    this(employeeNumber, isReadOnly, false);
+	}
+
+   public EditEmpInfo(int employeeNumber, boolean isReadOnly, boolean openedFromEmployeeTable) {
+    this.employeeService = new EmployeeManagementService();
+    this.openedFromEmployeeTable = openedFromEmployeeTable;
     initComponents();
+    configureHrInputMasks();
+    WindowNavigation.installReturnToMainMenuOnClose(this);
+    configureCloseTarget();
     loadEmployeeData(employeeNumber); // Your method to fill text fields
-    
-    if (isReadOnly) {
-        // 1. Hide the Save/Update button
-        Save.setVisible(false); 
-        
-        // 2. Optional: Set all text fields to non-editable
-        // Example: jTextFieldFirstName.setEditable(false);
-        
-        // 3. Change the title to let the user know they are just viewing
-        jLabelTitle.setText("View Employee Details (Read-Only)");
+
+    boolean isHR = isHrUser();
+    boolean shouldBeReadOnly = isReadOnly || !isHR;
+
+    if (shouldBeReadOnly) {
+        disableEditing();
+    } else {
+        // HR can edit using the Edit button workflow.
+        Save.setVisible(true);
+        Edit.setVisible(true);
+        setFieldsEditable(false);
     }
+		}
+
+private void configureCloseTarget() {
+    if (!openedFromEmployeeTable) {
+        return;
+    }
+    EmployeeTable table = EmployeeTable.getInstance();
+    if (table == null || !table.isDisplayable()) {
+        return;
+    }
+
+    WindowNavigation.suppressReturnToMainMenuOnClose(this);
+    this.addWindowListener(new java.awt.event.WindowAdapter() {
+        @Override
+        public void windowClosed(java.awt.event.WindowEvent e) {
+            if (table.isDisplayable()) {
+                table.setVisible(true);
+                table.toFront();
+                table.requestFocus();
+            }
+        }
+    });
+}
+
+private boolean isHrUser() {
+    model.Employee current = model.User.getLoggedInUser();
+    return current != null && "HR".equalsIgnoreCase(current.getRole());
+}
+
+private void configureHrInputMasks() {
+    if (!isHrUser()) {
+        return;
+    }
+    applyInputMask(PhoneNum, new int[]{3, 3, 3}, "000-000-000");
+    applyInputMask(SSS, new int[]{2, 7, 1}, "00-0000000-0");
+    applyInputMask(PHILHEALTH, new int[]{3, 3, 3, 3}, "000-000-000-000");
+    applyInputMask(TIN, new int[]{3, 3, 3, 3}, "000-000-000-000");
+    applyInputMask(PAGIBIG, new int[]{3, 3, 3, 2}, "000-000-000-00");
+}
+
+private void applyInputMask(javax.swing.text.JTextComponent field, int[] groups, String formatHint) {
+    final int maxDigits = totalDigits(groups);
+    field.setToolTipText("Format: " + formatHint);
+    field.addKeyListener(new KeyAdapter() {
+        @Override
+        public void keyTyped(KeyEvent e) {
+            char c = e.getKeyChar();
+            if (c == '\b' || c == 127) {
+                return;
+            }
+            if (!Character.isDigit(c)) {
+                e.consume();
+                return;
+            }
+
+            String current = field.getText() == null ? "" : field.getText();
+            int currentDigits = countDigits(current);
+            String selected = field.getSelectedText();
+            int selectedDigits = selected == null ? 0 : countDigits(selected);
+            if (currentDigits - selectedDigits >= maxDigits) {
+                e.consume();
+            }
+        }
+
+        @Override
+        public void keyReleased(KeyEvent e) {
+            String text = field.getText() == null ? "" : field.getText();
+            String digits = text.replaceAll("\\D", "");
+            if (digits.length() > maxDigits) {
+                digits = digits.substring(0, maxDigits);
+            }
+            String formatted = formatByGroups(digits, groups);
+            if (!formatted.equals(text)) {
+                field.setText(formatted);
+            }
+        }
+    });
+}
+
+private int totalDigits(int[] groups) {
+    int total = 0;
+    for (int group : groups) {
+        total += group;
+    }
+    return total;
+}
+
+private int countDigits(String value) {
+    return value == null ? 0 : value.replaceAll("\\D", "").length();
+}
+
+private String formatByGroups(String digits, int[] groups) {
+    StringBuilder sb = new StringBuilder();
+    int idx = 0;
+    for (int i = 0; i < groups.length; i++) {
+        int len = groups[i];
+        if (idx >= digits.length()) {
+            break;
+        }
+        int end = Math.min(idx + len, digits.length());
+        sb.append(digits, idx, end);
+        idx = end;
+        if (idx < digits.length() && i < groups.length - 1) {
+            sb.append("-");
+        }
+    }
+    return sb.toString();
 }
 
 
 private void loadEmployeeData(int empNum) {
-        EmployeeRepository repo = new EmployeeRepository();
-    // findById returns an Optional, so we handle it safely
-    Optional<Employee> result = repo.findById(empNum);
+    Optional<Employee> result = employeeService.getEmployeeById(empNum);
 
     if (result.isPresent()) {
         this.employeeData = result.get();
@@ -50,6 +165,7 @@ private void loadEmployeeData(int empNum) {
         PhoneNum.setText(employeeData.getPhoneNumber());
         Birthday.setText(employeeData.getBirthday());
         Address.setText(employeeData.getAddress());
+        PositionInfo.setText(employeeData.getPosition());
         ImmSup.setText(employeeData.getSupervisor());
         
         // Fill financial fields
@@ -71,103 +187,55 @@ private void loadEmployeeData(int empNum) {
     }
 }
 
-    /**
-     * Disables editing when in read-only mode.
-     * Prevents modifications to employee details while viewing.
-     */
+
+
+
+
     private void disableEditing() {
-    Name.setEditable(false);
-    Position.setEditable(false);
-    PhoneNum.setEditable(false);
-    Status.setEditable(false);
-    ImmSup.setEditable(false);
+        setFieldsEditable(false);
+        Save.setVisible(false);
+        Edit.setVisible(false);
+    }
 
-    // 🔄 Instead of disabling, hide the buttons completely
-    Save.setVisible(false);
-    Edit.setVisible(false);
-}
-
-
-    /**
-     * Toggles field editability when switching between view and edit mode.
-     * Enables or disables input fields based on the `editable` parameter.
-     *
-     * @param editable If true, allows editing of employee details.
-     */
     private void setFieldsEditable(boolean editable) {
-    // Enable/disable employee details fields
-    Name.setEditable(editable);
-    Position.setEditable(editable);
-    PhoneNum.setEditable(editable);
-    Status.setEditable(editable);
-    ImmSup.setEditable(editable);
-    Address.setEditable(editable);
-    Birthday.setEditable(editable);
+        Name.setEditable(false);
+        Position.setEditable(false);
+        PositionInfo.setEditable(editable);
+        PhoneNum.setEditable(editable);
+        Status.setEditable(editable);
+        ImmSup.setEditable(editable);
+        Address.setEditable(editable);
+        Birthday.setEditable(editable);
 
-    // Enable/disable financial fields
-    SSS.setEditable(editable);
-    PAGIBIG.setEditable(editable);
-    PHILHEALTH.setEditable(editable);
-    TIN.setEditable(editable);
-    Salary.setEditable(editable);
-    Rice.setEditable(editable);
-    PhoneAll.setEditable(editable);
-    ClothAll.setEditable(editable);
-    Hourly.setEditable(editable);
+        SSS.setEditable(editable);
+        PAGIBIG.setEditable(editable);
+        PHILHEALTH.setEditable(editable);
+        TIN.setEditable(editable);
+        Salary.setEditable(editable);
+        Rice.setEditable(editable);
+        PhoneAll.setEditable(editable);
+        ClothAll.setEditable(editable);
+        Hourly.setEditable(editable);
 
-    // Toggle Save and Edit buttons
-    Save.setEnabled(editable);
-    Edit.setEnabled(!editable);
-}
+        PositionInfo.setFocusable(editable);
+        PhoneNum.setFocusable(editable);
+        Status.setFocusable(editable);
+        ImmSup.setFocusable(editable);
+        Address.setFocusable(editable);
+        Birthday.setFocusable(editable);
+        SSS.setFocusable(editable);
+        PAGIBIG.setFocusable(editable);
+        PHILHEALTH.setFocusable(editable);
+        TIN.setFocusable(editable);
+        Salary.setFocusable(editable);
+        Rice.setFocusable(editable);
+        PhoneAll.setFocusable(editable);
+        ClothAll.setFocusable(editable);
+        Hourly.setFocusable(editable);
 
-
-    /**
-     * Saves updated employee details using `EmployeeRepository.updateEmployee()`.
-     * Ensures that changes are stored in the CSV file after editing.
-     */
-   private void saveEmployeeUpdates() {
-    if (employeeData == null) {
-        JOptionPane.showMessageDialog(this, "Error: No employee data loaded!", "Error", JOptionPane.ERROR_MESSAGE);
-        return;
+        Save.setEnabled(editable);
+        Edit.setEnabled(!editable);
     }
-
-    // ✅ Use raw input instead of applying formatIDLive() again
-    employeeData.setPhoneNumber(PhoneNum.getText().trim());  
-
-    // ✅ Save updates using EmployeeRepository
-    EmployeeRepository repo = new EmployeeRepository();
-    repo.update(employeeData);
-
-    // ✅ Refresh employee table after saving
-    if (EmployeeTable.getInstance() != null) {
-    EmployeeTable.getInstance().refreshEmployeeTable();
-}
-
-    JOptionPane.showMessageDialog(this, "Employee details updated successfully!");
-    dispose();  // Close EditEmpInfo window
-}
-
-
-    
-    private void addKeyListenerToField(JTextField field) {
-    field.addKeyListener(new KeyAdapter() {
-        public void keyReleased(KeyEvent evt) {
-            String rawInput = field.getText().replaceAll("[^0-9]", "");  // Remove non-numeric characters
-            field.setText(formatIDLive(rawInput));  // Apply hyphen formatting
-        }
-    });
-}
-    
-    private String formatIDLive(String input) {
-    StringBuilder formatted = new StringBuilder();
-    for (int i = 0; i < input.length(); i++) {
-        formatted.append(input.charAt(i));
-        if ((i + 1) % 3 == 0 && i + 1 < input.length()) {
-            formatted.append("-");
-        }
-    }
-    return formatted.toString().replaceAll("--", "-");  // ✅ Prevent double hyphens
-}
 
     /**
      * This method is called from within the constructor to initialize the form.
@@ -201,6 +269,7 @@ private void loadEmployeeData(int empNum) {
         jLabel19 = new javax.swing.JLabel();
         jLabel20 = new javax.swing.JLabel();
         jLabel21 = new javax.swing.JLabel();
+        jLabel22 = new javax.swing.JLabel();
         Save = new javax.swing.JButton();
         jButton2 = new javax.swing.JButton();
         Edit = new javax.swing.JButton();
@@ -217,8 +286,8 @@ private void loadEmployeeData(int empNum) {
         PhoneNum = new javax.swing.JTextField();
         Birthday = new javax.swing.JTextField();
         Address = new javax.swing.JTextField();
+        PositionInfo = new javax.swing.JTextField();
         jLabel1 = new javax.swing.JLabel();
-        jLabelTitle = new javax.swing.JTextField();
 
         setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
 
@@ -240,33 +309,18 @@ private void loadEmployeeData(int empNum) {
         Name.setFont(new java.awt.Font("Segoe UI", 1, 24)); // NOI18N
         Name.setForeground(new java.awt.Color(51, 51, 51));
         Name.setText("Garcia, Manuel III");
-        Name.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                NameActionPerformed(evt);
-            }
-        });
 
         Position.setEditable(false);
         Position.setBackground(new java.awt.Color(204, 204, 204));
         Position.setFont(new java.awt.Font("Segoe UI", 1, 12)); // NOI18N
         Position.setHorizontalAlignment(javax.swing.JTextField.CENTER);
         Position.setText("Chief Excecutive Officer");
-        Position.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                PositionActionPerformed(evt);
-            }
-        });
 
         Status.setEditable(false);
         Status.setBackground(new java.awt.Color(204, 204, 204));
         Status.setFont(new java.awt.Font("Segoe UI", 1, 12)); // NOI18N
         Status.setHorizontalAlignment(javax.swing.JTextField.CENTER);
         Status.setText("Regular");
-        Status.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                StatusActionPerformed(evt);
-            }
-        });
 
         textLogo.setFont(new java.awt.Font("Kinetika Bold", 0, 55)); // NOI18N
         textLogo.setForeground(new java.awt.Color(255, 255, 255));
@@ -351,16 +405,19 @@ private void loadEmployeeData(int empNum) {
         jPanel3.add(jLabel11, new org.netbeans.lib.awtextra.AbsoluteConstraints(317, 81, 123, 24));
 
         jLabel14.setText("Phone Number:");
-        jPanel3.add(jLabel14, new org.netbeans.lib.awtextra.AbsoluteConstraints(23, 320, 146, -1));
+        jPanel3.add(jLabel14, new org.netbeans.lib.awtextra.AbsoluteConstraints(23, 350, 146, -1));
 
         jLabel15.setText("Birthday:");
-        jPanel3.add(jLabel15, new org.netbeans.lib.awtextra.AbsoluteConstraints(23, 350, 145, -1));
+        jPanel3.add(jLabel15, new org.netbeans.lib.awtextra.AbsoluteConstraints(23, 380, 145, -1));
 
         jLabel16.setText("Address:");
-        jPanel3.add(jLabel16, new org.netbeans.lib.awtextra.AbsoluteConstraints(23, 380, 145, -1));
+        jPanel3.add(jLabel16, new org.netbeans.lib.awtextra.AbsoluteConstraints(23, 410, 145, -1));
 
         jLabel17.setText("Immediate Supervisor:");
-        jPanel3.add(jLabel17, new org.netbeans.lib.awtextra.AbsoluteConstraints(23, 290, -1, -1));
+        jPanel3.add(jLabel17, new org.netbeans.lib.awtextra.AbsoluteConstraints(23, 320, -1, -1));
+
+        jLabel22.setText("Position:");
+        jPanel3.add(jLabel22, new org.netbeans.lib.awtextra.AbsoluteConstraints(23, 290, 146, -1));
 
         jLabel18.setText("Rice Subsidy:");
         jPanel3.add(jLabel18, new org.netbeans.lib.awtextra.AbsoluteConstraints(317, 204, 144, -1));
@@ -406,29 +463,14 @@ private void loadEmployeeData(int empNum) {
 
         PAGIBIG.setEditable(false);
         PAGIBIG.setText("691295330870");
-        PAGIBIG.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                PAGIBIGActionPerformed(evt);
-            }
-        });
         jPanel3.add(PAGIBIG, new org.netbeans.lib.awtextra.AbsoluteConstraints(176, 111, 123, -1));
 
         PHILHEALTH.setEditable(false);
         PHILHEALTH.setText("820126853951");
-        PHILHEALTH.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                PHILHEALTHActionPerformed(evt);
-            }
-        });
         jPanel3.add(PHILHEALTH, new org.netbeans.lib.awtextra.AbsoluteConstraints(176, 141, 123, -1));
 
         TIN.setEditable(false);
         TIN.setText("442-605-657-000");
-        TIN.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                TINActionPerformed(evt);
-            }
-        });
         jPanel3.add(TIN, new org.netbeans.lib.awtextra.AbsoluteConstraints(176, 171, 123, -1));
 
         SSS.setEditable(false);
@@ -437,12 +479,7 @@ private void loadEmployeeData(int empNum) {
 
         Salary.setEditable(false);
         Salary.setText("₱90,000.00");
-        Salary.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                SalaryActionPerformed(evt);
-            }
-        });
-        jPanel3.add(Salary, new org.netbeans.lib.awtextra.AbsoluteConstraints(400, 10, 101, -1));
+        jPanel3.add(Salary, new org.netbeans.lib.awtextra.AbsoluteConstraints(470, 80, 101, -1));
 
         Hourly.setEditable(false);
         Hourly.setText("₱535.71");
@@ -462,55 +499,28 @@ private void loadEmployeeData(int empNum) {
 
         ImmSup.setEditable(false);
         ImmSup.setText("N/A");
-        ImmSup.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                ImmSupActionPerformed(evt);
-            }
-        });
-        jPanel3.add(ImmSup, new org.netbeans.lib.awtextra.AbsoluteConstraints(175, 287, 123, -1));
+        jPanel3.add(ImmSup, new org.netbeans.lib.awtextra.AbsoluteConstraints(175, 317, 123, -1));
 
         PhoneNum.setEditable(false);
         PhoneNum.setText("966-860-270");
-        PhoneNum.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                PhoneNumActionPerformed(evt);
-            }
-        });
-        jPanel3.add(PhoneNum, new org.netbeans.lib.awtextra.AbsoluteConstraints(175, 317, 123, -1));
+        jPanel3.add(PhoneNum, new org.netbeans.lib.awtextra.AbsoluteConstraints(175, 347, 123, -1));
 
         Birthday.setEditable(false);
         Birthday.setText("10/11/1983");
-        Birthday.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                BirthdayActionPerformed(evt);
-            }
-        });
-        jPanel3.add(Birthday, new org.netbeans.lib.awtextra.AbsoluteConstraints(175, 347, 123, -1));
+        jPanel3.add(Birthday, new org.netbeans.lib.awtextra.AbsoluteConstraints(175, 377, 123, -1));
 
         Address.setEditable(false);
         Address.setText("Valero Carpark Building Valero Street 1227, Makati City");
-        Address.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                AddressActionPerformed(evt);
-            }
-        });
-        jPanel3.add(Address, new org.netbeans.lib.awtextra.AbsoluteConstraints(174, 377, 394, -1));
+        jPanel3.add(Address, new org.netbeans.lib.awtextra.AbsoluteConstraints(174, 407, 394, -1));
+
+        PositionInfo.setEditable(false);
+        PositionInfo.setText("Position");
+        jPanel3.add(PositionInfo, new org.netbeans.lib.awtextra.AbsoluteConstraints(175, 287, 230, -1));
 
         jLabel1.setFont(new java.awt.Font("Segoe UI", 2, 8)); // NOI18N
         jLabel1.setHorizontalAlignment(javax.swing.SwingConstants.TRAILING);
         jLabel1.setText("CP2 H1102 SY24-25 Team Petix - C.Oreta, S.Singh, R.Sisles, J.Singh, D.Sumatra");
         jPanel3.add(jLabel1, new org.netbeans.lib.awtextra.AbsoluteConstraints(330, 570, 340, -1));
-
-        jLabelTitle.setEditable(false);
-        jLabelTitle.setBackground(new java.awt.Color(204, 204, 204));
-        jLabelTitle.setFont(new java.awt.Font("Segoe UI", 1, 12)); // NOI18N
-        jLabelTitle.setHorizontalAlignment(javax.swing.JTextField.CENTER);
-        jLabelTitle.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                jLabelTitleActionPerformed(evt);
-            }
-        });
-        jPanel3.add(jLabelTitle, new org.netbeans.lib.awtextra.AbsoluteConstraints(10, 10, 280, -1));
 
         javax.swing.GroupLayout layout = new javax.swing.GroupLayout(getContentPane());
         getContentPane().setLayout(layout);
@@ -536,132 +546,57 @@ private void loadEmployeeData(int empNum) {
         pack();
     }// </editor-fold>//GEN-END:initComponents
 
-    private void TINActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_TINActionPerformed
-        // TODO add your handling code here:
-    }//GEN-LAST:event_TINActionPerformed
-
-    private void PHILHEALTHActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_PHILHEALTHActionPerformed
-        // TODO add your handling code here:
-    }//GEN-LAST:event_PHILHEALTHActionPerformed
-
-    private void PAGIBIGActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_PAGIBIGActionPerformed
-        // TODO add your handling code here:
-    }//GEN-LAST:event_PAGIBIGActionPerformed
-
     private void EditActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_EditActionPerformed
-        // TODO add your handling code here:
         setFieldsEditable(true); //Unlock fields for editinG
  
     }//GEN-LAST:event_EditActionPerformed
 
     private void SaveActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_SaveActionPerformed
-                                    
     if (employeeData == null) {
         JOptionPane.showMessageDialog(this, "Error: No employee data loaded!", "Error", JOptionPane.ERROR_MESSAGE);
         return;
     }
 
     try {
-        // ✅ Preserve Last Name correctly
-        employeeData.setLastName(txtLname.getText().trim().isEmpty() ? employeeData.getLastName() : txtLname.getText().trim());
-
-        // ✅ Ensure First Name updates only if modified and prevent duplication
-        String firstNameInput = FirstName.getText().trim();
-        if (!firstNameInput.equalsIgnoreCase(employeeData.getFirstName()) && !firstNameInput.isEmpty()) {
-            employeeData.setFirstName(firstNameInput);
+        boolean updated = employeeService.updateEmployeeFromForm(
+                employeeData,
+                txtLname.getText().trim(),
+                PositionInfo.getText().trim(),
+                PhoneNum.getText().trim(),
+                Status.getText().trim(),
+                ImmSup.getText().trim(),
+                Address.getText().trim(),
+                Birthday.getText().trim(),
+                SSS.getText().trim(),
+                PHILHEALTH.getText().trim(),
+                TIN.getText().trim(),
+                PAGIBIG.getText().trim(),
+                Salary.getText().trim(),
+                Hourly.getText().trim(),
+                PhoneAll.getText().trim(),
+                ClothAll.getText().trim(),
+                Rice.getText().trim()
+        );
+        if (!updated) {
+            JOptionPane.showMessageDialog(this, "Failed to save employee changes.", "Save Failed", JOptionPane.ERROR_MESSAGE);
+            return;
         }
-          System.out.println(firstNameInput);
-        // ✅ Handle other text fields correctly
-        employeeData.setPosition(Position.getText().trim().isEmpty() ? employeeData.getPosition() : Position.getText().trim());
-        employeeData.setPhoneNumber(PhoneNum.getText().trim().isEmpty() ? employeeData.getPhoneNumber() : PhoneNum.getText().trim());
-        employeeData.setStatus(Status.getText().trim().isEmpty() ? employeeData.getStatus() : Status.getText().trim());
-        employeeData.setSupervisor(ImmSup.getText().trim().isEmpty() ? employeeData.getSupervisor() : ImmSup.getText().trim());
-        employeeData.setAddress(Address.getText().trim().isEmpty() ? employeeData.getAddress() : Address.getText().trim().replaceAll("^\"|\"$", ""));
-        employeeData.setBirthday(Birthday.getText().trim().isEmpty() ? employeeData.getBirthday() : Birthday.getText().trim());
-        employeeData.setSssNumber(SSS.getText().trim().isEmpty() ? employeeData.getSssNumber() : SSS.getText().trim());
-        employeeData.setPhilHealthNumber(PHILHEALTH.getText().trim().isEmpty() ? employeeData.getPhilHealthNumber() : PHILHEALTH.getText().trim());
-        employeeData.setTinNumber(TIN.getText().trim().isEmpty() ? employeeData.getTinNumber() : TIN.getText().trim());
-        employeeData.setPagIbigNumber(PAGIBIG.getText().trim().isEmpty() ? employeeData.getPagIbigNumber() : PAGIBIG.getText().trim());
 
-        // ✅ Handle numerical fields safely (avoids overwriting with 0.0)
-        employeeData.setBasicSalary(parseDouble(Salary.getText().trim(), employeeData.getBasicSalary()));
-        employeeData.setHourlyRate(parseDouble(Hourly.getText().trim(), employeeData.getHourlyRate()));
-        employeeData.setPhoneAllowance(parseDouble(PhoneAll.getText().trim(), employeeData.getPhoneAllowance()));
-        employeeData.setClothingAllowance(parseDouble(ClothAll.getText().trim(), employeeData.getClothingAllowance()));
-        employeeData.setRiceSubsidy(parseDouble(Rice.getText().trim(), employeeData.getRiceSubsidy()));
-
-
-        // Use the repository to update
-	new EmployeeRepository().update(employeeData);
-        
         JOptionPane.showMessageDialog(this, "Employee record updated successfully!");
-
         if (EmployeeTable.getInstance() != null) {
             EmployeeTable.getInstance().refreshEmployeeTable();
         }
 
         setFieldsEditable(false);
         dispose();
-
-    } catch (NumberFormatException e) {
-        JOptionPane.showMessageDialog(this, "Error: Invalid numeric input!", "Data Error", JOptionPane.ERROR_MESSAGE);
-        System.err.println("ERROR: Failed to parse numerical values - " + e.getMessage());
+    } catch (Exception e) {
+        JOptionPane.showMessageDialog(this, "Error saving employee changes: " + e.getMessage(), "Data Error", JOptionPane.ERROR_MESSAGE);
     }
-}
-
-/**
- * Helper method to safely parse double values, preserving the existing value if input is invalid or empty.
- */
-private double parseDouble(String value, double currentValue) {
-    try {
-        // Remove currency symbols and commas before parsing
-        String cleanedValue = value.replace("₱", "").replace(",", "").trim();
-        return cleanedValue.isEmpty() ? currentValue : Double.parseDouble(cleanedValue);
-    } catch (NumberFormatException e) {
-        return currentValue; 
-    }  
-    }//GEN-LAST:event_SaveActionPerformed
+}//GEN-LAST:event_SaveActionPerformed
 
     private void jButton2ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton2ActionPerformed
-        // TODO add your handling code here:
         dispose ();
     }//GEN-LAST:event_jButton2ActionPerformed
-
-    private void SalaryActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_SalaryActionPerformed
-        // TODO add your handling code here:
-    }//GEN-LAST:event_SalaryActionPerformed
-
-    private void ImmSupActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_ImmSupActionPerformed
-        // TODO add your handling code here:
-    }//GEN-LAST:event_ImmSupActionPerformed
-
-    private void PhoneNumActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_PhoneNumActionPerformed
-        // TODO add your handling code here:
-    }//GEN-LAST:event_PhoneNumActionPerformed
-
-    private void BirthdayActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_BirthdayActionPerformed
-        // TODO add your handling code here:
-    }//GEN-LAST:event_BirthdayActionPerformed
-
-    private void AddressActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_AddressActionPerformed
-        // TODO add your handling code here:
-    }//GEN-LAST:event_AddressActionPerformed
-
-    private void NameActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_NameActionPerformed
-        // TODO add your handling code here:
-    }//GEN-LAST:event_NameActionPerformed
-
-    private void PositionActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_PositionActionPerformed
-        // TODO add your handling code here:
-    }//GEN-LAST:event_PositionActionPerformed
-
-    private void StatusActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_StatusActionPerformed
-        // TODO add your handling code here:
-    }//GEN-LAST:event_StatusActionPerformed
-
-    private void jLabelTitleActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jLabelTitleActionPerformed
-        // TODO add your handling code here:
-    }//GEN-LAST:event_jLabelTitleActionPerformed
 
     /**
      * @param args the command line arguments
@@ -714,6 +649,7 @@ private double parseDouble(String value, double currentValue) {
     private javax.swing.JLabel PHILHEALTHname;
     private javax.swing.JFormattedTextField PhoneAll;
     private javax.swing.JTextField PhoneNum;
+    private javax.swing.JTextField PositionInfo;
     private javax.swing.JTextField Position;
     private javax.swing.JFormattedTextField Rice;
     private javax.swing.JFormattedTextField SSS;
@@ -736,7 +672,7 @@ private double parseDouble(String value, double currentValue) {
     private javax.swing.JLabel jLabel19;
     private javax.swing.JLabel jLabel20;
     private javax.swing.JLabel jLabel21;
-    private javax.swing.JTextField jLabelTitle;
+    private javax.swing.JLabel jLabel22;
     private javax.swing.JPanel jPanel1;
     private javax.swing.JPanel jPanel2;
     private javax.swing.JPanel jPanel3;
@@ -744,3 +680,8 @@ private double parseDouble(String value, double currentValue) {
     private javax.swing.JTextField txtLname;
     // End of variables declaration//GEN-END:variables
 }
+
+
+
+
+

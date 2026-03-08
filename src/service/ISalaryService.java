@@ -9,6 +9,7 @@ package service;
 
 import model.Employee;
 import model.PayslipData;
+import java.awt.image.BufferedImage;
 import java.time.LocalDate;
 import java.util.List;
 
@@ -24,4 +25,5 @@ public interface ISalaryService {
     PayslipData computePayslipData(Employee emp, String empId, LocalDate startDate, LocalDate endDate);
     List<LocalDate> getAvailableCutoffDates(String empId);
     LocalDate[] getCutoffPeriod(LocalDate cutoffDate);
+    boolean exportPayslipPdf(BufferedImage image, String outputPath);
 }

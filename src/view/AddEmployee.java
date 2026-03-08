@@ -1,25 +1,25 @@
 package view;
 
-
-import model.Employee;
 import javax.swing.JOptionPane;
-import java.util.List;
-import com.opencsv.CSVWriter;
-import java.io.FileWriter;
-import java.io.IOException;
-import model.*;
-import repository.*;
-import service.*;
-
-
+import service.IEmployeeManagementService;
+import service.EmployeeManagementService;
+import java.awt.event.KeyAdapter;
+import java.awt.event.KeyEvent;
 
 
 public class AddEmployee extends javax.swing.JFrame {
+    
+    private final IEmployeeManagementService employeeService;
 
     public AddEmployee() {
+        this(new EmployeeManagementService());
+    }
+    
+    public AddEmployee(IEmployeeManagementService employeeService) {
+        this.employeeService = employeeService;
         initComponents();
         generateNextEmpNum();
-
+        configureHrInputMasks();
 
         jTxtEmpNum.setEditable(false);
         jTxtEmpNum.setFocusable(false);
@@ -27,16 +27,95 @@ public class AddEmployee extends javax.swing.JFrame {
     }
 
     private void generateNextEmpNum() {
-    List<Employee> employees = new EmployeeRepository().findAll(); 
+        int newEmpNum = employeeService.getNextEmployeeNumber();
+        jTxtEmpNum.setText(String.valueOf(newEmpNum));
+        jTxtEmpNum.setEditable(false);
+    }
 
+    private boolean isHrUser() {
+        model.Employee current = model.User.getLoggedInUser();
+        return current != null && "HR".equalsIgnoreCase(current.getRole());
+    }
 
-    int newEmpNum = employees.isEmpty() ? 10001 : employees.stream()
-                           .mapToInt(Employee::getEmployeeNumber)
-                           .max().orElse(10000) + 1;
+    private void configureHrInputMasks() {
+        if (!isHrUser()) {
+            return;
+        }
+        applyInputMask(jTxtPhoneNumber, new int[]{3, 3, 3}, "000-000-000");
+        applyInputMask(jTextSSS, new int[]{2, 7, 1}, "00-0000000-0");
+        applyInputMask(jTextPHILHEALTH, new int[]{3, 3, 3, 3}, "000-000-000-000");
+        applyInputMask(jTextTIN, new int[]{3, 3, 3, 3}, "000-000-000-000");
+        applyInputMask(jTextPAGIBIG, new int[]{3, 3, 3, 2}, "000-000-000-00");
+    }
 
-    jTxtEmpNum.setText(String.valueOf(newEmpNum));
-    jTxtEmpNum.setEditable(false);
-}
+    private void applyInputMask(javax.swing.text.JTextComponent field, int[] groups, String formatHint) {
+        final int maxDigits = totalDigits(groups);
+        field.setToolTipText("Format: " + formatHint);
+        field.addKeyListener(new KeyAdapter() {
+            @Override
+            public void keyTyped(KeyEvent e) {
+                char c = e.getKeyChar();
+                if (c == '\b' || c == 127) {
+                    return;
+                }
+                if (!Character.isDigit(c)) {
+                    e.consume();
+                    return;
+                }
+
+                String current = field.getText() == null ? "" : field.getText();
+                int currentDigits = countDigits(current);
+                String selected = field.getSelectedText();
+                int selectedDigits = selected == null ? 0 : countDigits(selected);
+                if (currentDigits - selectedDigits >= maxDigits) {
+                    e.consume();
+                }
+            }
+
+            @Override
+            public void keyReleased(KeyEvent e) {
+                String text = field.getText() == null ? "" : field.getText();
+                String digits = text.replaceAll("\\D", "");
+                if (digits.length() > maxDigits) {
+                    digits = digits.substring(0, maxDigits);
+                }
+                String formatted = formatByGroups(digits, groups);
+                if (!formatted.equals(text)) {
+                    field.setText(formatted);
+                }
+            }
+        });
+    }
+
+    private int totalDigits(int[] groups) {
+        int total = 0;
+        for (int group : groups) {
+            total += group;
+        }
+        return total;
+    }
+
+    private int countDigits(String value) {
+        return value == null ? 0 : value.replaceAll("\\D", "").length();
+    }
+
+    private String formatByGroups(String digits, int[] groups) {
+        StringBuilder sb = new StringBuilder();
+        int idx = 0;
+        for (int i = 0; i < groups.length; i++) {
+            int len = groups[i];
+            if (idx >= digits.length()) {
+                break;
+            }
+            int end = Math.min(idx + len, digits.length());
+            sb.append(digits, idx, end);
+            idx = end;
+            if (idx < digits.length() && i < groups.length - 1) {
+                sb.append("-");
+            }
+        }
+        return sb.toString();
+    }
 
 
     /**
@@ -119,11 +198,6 @@ public class AddEmployee extends javax.swing.JFrame {
         jLblPosition.setText("Position:");
         jPanel1.add(jLblPosition, new org.netbeans.lib.awtextra.AbsoluteConstraints(35, 260, 132, -1));
 
-        jTxtEmpNum.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                jTxtEmpNumActionPerformed(evt);
-            }
-        });
         jPanel1.add(jTxtEmpNum, new org.netbeans.lib.awtextra.AbsoluteConstraints(167, 104, 211, -1));
         jPanel1.add(jTxtLastName, new org.netbeans.lib.awtextra.AbsoluteConstraints(167, 134, 211, -1));
         jPanel1.add(jTxtFirstName, new org.netbeans.lib.awtextra.AbsoluteConstraints(167, 164, 211, -1));
@@ -143,11 +217,6 @@ public class AddEmployee extends javax.swing.JFrame {
         jLblTIN.setText("TIN");
         jPanel1.add(jLblTIN, new org.netbeans.lib.awtextra.AbsoluteConstraints(35, 386, 132, -1));
 
-        jTextSSS.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                jTextSSSActionPerformed(evt);
-            }
-        });
         jPanel1.add(jTextSSS, new org.netbeans.lib.awtextra.AbsoluteConstraints(167, 293, 211, -1));
 
         jLblPersonal.setFont(new java.awt.Font("Segoe UI", 1, 12)); // NOI18N
@@ -250,126 +319,94 @@ public class AddEmployee extends javax.swing.JFrame {
         pack();
     }// </editor-fold>//GEN-END:initComponents
 
-    private void jTxtEmpNumActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jTxtEmpNumActionPerformed
-        // TODO add your handling code here:
-    }//GEN-LAST:event_jTxtEmpNumActionPerformed
-
-    private void jTextSSSActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jTextSSSActionPerformed
-        // TODO add your handling code here:
-    }//GEN-LAST:event_jTextSSSActionPerformed
-
     private void jButtonSubmitActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButtonSubmitActionPerformed
         try {
+            int empNum = Integer.parseInt(jTxtEmpNum.getText().trim());
+            String lastName = jTxtLastName.getText().trim();
+            String firstName = jTxtFirstName.getText().trim();
+            String phoneNumber = jTxtPhoneNumber.getText().trim();
+            String status = jTxtStatus.getText().trim();
+            String position = jTxtPosition.getText().trim();
 
-        int empNum = Integer.parseInt(jTxtEmpNum.getText().trim());
-        String lastName = jTxtLastName.getText().trim();
-        String firstName = jTxtFirstName.getText().trim();
-        String phoneNumber = jTxtPhoneNumber.getText().trim();
-        String status = jTxtStatus.getText().trim().isEmpty() ? "NA" : jTxtStatus.getText().trim();
-        String position = jTxtPosition.getText().trim().isEmpty() ? "NA" : jTxtPosition.getText().trim();
-        String supervisor = "NA";
-        String address = "NA";
-        String birthday = "NA";
+            String sssNumber = jTextSSS.getText().trim();
+            String pagIbigNumber = jTextPAGIBIG.getText().trim();
+            String philHealthNumber = jTextPHILHEALTH.getText().trim();
+            String tinNumber = jTextTIN.getText().trim();
 
-        String sssNumber = jTextSSS.getText().trim().isEmpty() ? "NA" : jTextSSS.getText().trim();
-        String pagIbigNumber = jTextPAGIBIG.getText().trim().isEmpty() ? "NA" : jTextPAGIBIG.getText().trim();
-        String philHealthNumber = jTextPHILHEALTH.getText().trim().isEmpty() ? "NA" : jTextPHILHEALTH.getText().trim();
-        String tinNumber = jTextTIN.getText().trim().isEmpty() ? "NA" : jTextTIN.getText().trim();
+            String[] roles = {"ADMIN", "FINANCE", "IT", "HR", "EMPLOYEE"};
+            String accessLevel = (String) JOptionPane.showInputDialog(
+                this,
+                "Select Access Level for this Employee:",
+                "Access Assignment",
+                JOptionPane.QUESTION_MESSAGE,
+                null,
+                roles,
+                roles[0]
+            );
 
+            if (accessLevel == null || accessLevel.trim().isEmpty()) {
+                JOptionPane.showMessageDialog(this, "Access level is required.", "Validation Error", JOptionPane.ERROR_MESSAGE);
+                return;
+            }
 
-        if (lastName.isEmpty() || firstName.isEmpty() || phoneNumber.isEmpty()) {
-            JOptionPane.showMessageDialog(this, "Error: Last Name, First Name, and Phone Number are required!", "Validation Error", JOptionPane.ERROR_MESSAGE);
-            return;
-        }
+            String username = employeeService.generateDefaultUsername(firstName, lastName, empNum);
+            String password = employeeService.getDefaultPassword();
 
-        double basicSalary = 0.0;
-        double riceSubsidy = 0.0;
-        double phoneAllowance = 0.0;
-        double clothingAllowance = 0.0;
-        double grossSemiMonthlyRate = 0.0;
-        double hourlyRate = 0.0;
-        double withholdingTax = 0.0;
+            JOptionPane.showMessageDialog(this,
+                "Login for Employee " + firstName + " " + lastName + " has been created.\n" +
+                "Username: " + username + "\nPassword: " + password,
+                "Login Created", JOptionPane.INFORMATION_MESSAGE);
 
+            String answer = JOptionPane.showInputDialog(
+                this,
+                "Answer to: " + employeeService.getDefaultSecurityQuestion(),
+                "Security Question",
+                JOptionPane.QUESTION_MESSAGE
+            );
 
-        Employee newEmployee = new RegularEmployee(empNum, lastName, firstName, phoneNumber, status, position, supervisor,
-            address, birthday, String.valueOf(sssNumber), String.valueOf(philHealthNumber),
-            String.valueOf(tinNumber), String.valueOf(pagIbigNumber),
-            basicSalary, riceSubsidy, phoneAllowance, clothingAllowance,
-            grossSemiMonthlyRate, hourlyRate, withholdingTax);
+            if (answer == null || answer.trim().isEmpty()) {
+                JOptionPane.showMessageDialog(this, "Security answer is required.", "Validation Error", JOptionPane.ERROR_MESSAGE);
+                return;
+            }
 
-        new EmployeeRepository().save(newEmployee);
-        JOptionPane.showMessageDialog(this, "Employee added successfully!", "Success", JOptionPane.INFORMATION_MESSAGE);
-
-        String username = (firstName.charAt(0) + lastName).toLowerCase().replaceAll("\\s+", "");
-        String password = "Password123";
-
-        JOptionPane.showMessageDialog(this,
-            "Login for Employee " + firstName + " " + lastName + " has been created.\n" +
-            "Username: " + username + "\nPassword: " + password,
-            "Login Created", JOptionPane.INFORMATION_MESSAGE);
-
-        String[] roles = {"EMPLOYEE", "SUPPORT", "HR", "ADMIN"};
-        String accessLevel = (String) JOptionPane.showInputDialog(
-            this,
-            "Select Access Level for this Employee:",
-            "Access Assignment",
-            JOptionPane.QUESTION_MESSAGE,
-            null,
-            roles,
-            roles[0]
-        );
-
-        if (accessLevel == null || accessLevel.trim().isEmpty()) {
-            JOptionPane.showMessageDialog(this, "Access level is required.", "Validation Error", JOptionPane.ERROR_MESSAGE);
-            return;
-        }
-
-        String answer = JOptionPane.showInputDialog(
-            this,
-            "Answer to: What is your favorite food?",
-            "Security Question",
-            JOptionPane.QUESTION_MESSAGE
-        );
-
-        if (answer == null || answer.trim().isEmpty()) {
-            JOptionPane.showMessageDialog(this, "Security answer is required.", "Validation Error", JOptionPane.ERROR_MESSAGE);
-            return;
-        }
-
-        try (CSVWriter writer = new CSVWriter(new FileWriter("data/employee_logins.csv", true))) {
-            String[] loginRow = {
-                String.valueOf(empNum),
+            boolean created = employeeService.registerEmployeeWithLogin(
+                empNum,
                 lastName,
                 firstName,
+                phoneNumber,
+                status,
                 position,
-                supervisor,
-                username,
-                password,
-                "What is your favorite food?",
-                answer,
-                accessLevel
-            };
-            writer.writeNext(loginRow);
-        } catch (IOException ex) {
-            JOptionPane.showMessageDialog(this, "Login could not be saved: " + ex.getMessage(), "Login Error", JOptionPane.ERROR_MESSAGE);
-            return;
-        }
+                sssNumber,
+                philHealthNumber,
+                tinNumber,
+                pagIbigNumber,
+                accessLevel,
+                answer
+            );
+            if (!created) {
+                JOptionPane.showMessageDialog(this, "Error: Could not create employee/login record.", "Error", JOptionPane.ERROR_MESSAGE);
+                return;
+            }
 
-
-        generateNextEmpNum();
-        if (EmployeeTable.getInstance() != null) {
-            EmployeeTable.getInstance().refreshEmployeeTable();
-        }
-
-        dispose();
+            JOptionPane.showMessageDialog(this, "Employee added successfully!", "Success", JOptionPane.INFORMATION_MESSAGE);
+            generateNextEmpNum();
+            if (EmployeeTable.getInstance() != null) {
+                EmployeeTable.getInstance().refreshEmployeeTable();
+                dispose();
+            } else {
+                dispose();
+                new EmployeeTable().setVisible(true);
+            }
 
     } catch (NumberFormatException e) {
+
         JOptionPane.showMessageDialog(this, "Error: Invalid input! Ensure numeric values are entered correctly.", "Input Error", JOptionPane.ERROR_MESSAGE);
+    } catch (Exception e) {
+        JOptionPane.showMessageDialog(this, "Unexpected error: " + e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
     }
     }//GEN-LAST:event_jButtonSubmitActionPerformed
 
     private void jButtonCancelActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButtonCancelActionPerformed
-        // TODO add your handling code here:
     dispose(); 
     }//GEN-LAST:event_jButtonCancelActionPerformed
 

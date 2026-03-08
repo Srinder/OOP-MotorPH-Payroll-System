@@ -2,9 +2,6 @@ package repository;
 
 import model.AttendanceRecord;
 import java.io.*;
-import java.time.LocalDate;
-import java.time.format.DateTimeFormatter;
-import java.time.format.DateTimeParseException;
 import java.util.*;
 
 public class AttendanceRepository {
@@ -38,12 +35,6 @@ public class AttendanceRepository {
 
                 if (existing.getEmpNo().trim().equals(updated.getEmpNo().trim()) && 
                     existing.getDate().trim().equals(updated.getDate().trim())) {
-
-                    // CRITICAL: If the update has no Time In, keep the existing one
-                    if (updated.getLogIn() == null || updated.getLogIn().isEmpty() || updated.getLogIn().equals("N/A")) {
-                        updated.setLogIn(existing.getLogIn());
-                    }
-
                     allRecords.set(i, updated);
                     foundAny = true;
                 }
@@ -84,51 +75,11 @@ public class AttendanceRepository {
         return list;
     }
 
-    // 6. HELPER METHODS: For calculations and UI
     public List<AttendanceRecord> findByEmployeeId(String empId) {
         List<AttendanceRecord> filtered = new ArrayList<>();
         for (AttendanceRecord r : findAll()) {
             if (r.getEmpNo().equals(empId)) filtered.add(r);
         }
         return filtered;
-    }
-
-    public Map<String, Double> computeDailyAttendanceMinutes(int empId, String date) {
-        Map<String, Double> map = new HashMap<>();
-        // These keys MUST match what you use in Attendance.java (lines 261-263)
-        map.put("Late", 0.0);
-        map.put("Overtime", 0.0);
-        map.put("Undertime", 0.0);
-        return map;
-    }
-
-    public double getTotalHoursInRange(String empId, String start, String end) {
-        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("MM/dd/yyyy");
-
-        LocalDate startDate;
-        LocalDate endDate;
-        try {
-            startDate = LocalDate.parse(start, formatter);
-            endDate = LocalDate.parse(end, formatter);
-        } catch (DateTimeParseException ex) {
-            return 0.0;
-        }
-
-        if (endDate.isBefore(startDate)) {
-            return 0.0;
-        }
-
-        int workingDays = 0;
-        for (AttendanceRecord record : findByEmployeeId(empId)) {
-            try {
-                LocalDate recordDate = LocalDate.parse(record.getDate(), formatter);
-                if (!recordDate.isBefore(startDate) && !recordDate.isAfter(endDate)) {
-                    workingDays++;
-                }
-            } catch (DateTimeParseException ignored) {
-                // Skip rows with invalid dates.
-            }
-        }
-        return workingDays * 8.0;
     }
 }

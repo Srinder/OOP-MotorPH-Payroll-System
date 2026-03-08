@@ -1,10 +1,8 @@
 package view;
 
-import repository.EmployeeRepository;
 import model.User;
 import model.Employee;
 import java.util.List;
-import java.util.Vector;
 import java.util.Arrays;
 import java.awt.Color;
 import java.awt.Font;
@@ -13,33 +11,59 @@ import javax.swing.table.DefaultTableModel;
 import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.SwingUtilities;
 import javax.swing.JOptionPane;
+import service.IEmployeeManagementService;
+import service.EmployeeManagementService;
 
 public class EmployeeTable extends javax.swing.JFrame {
     public static EmployeeTable instance;
-    private AddEmployee addemp = new AddEmployee();
+    private final IEmployeeManagementService employeeService;
+    private AddEmployee addemp;
     private final boolean openedFromPayslip;
+    private final boolean openedFromAttendance;
+    private final boolean openedFromLeave;
+    private static final java.awt.Dimension ACTION_BUTTON_SIZE = new java.awt.Dimension(95, 34);
     
     public static EmployeeTable getInstance() {
-    return instance;
-}
+        return instance;
+    }
+    
     public void refreshEmployeeTable() {
-    loadEmployeeData();
-}
-    
-    
+        loadEmployeeData();
+    }
 
     public EmployeeTable() {
-        this(false);
+        this(false, false, false);
     }
 
     public EmployeeTable(boolean openedFromPayslip) {
+        this(openedFromPayslip, false, false);
+    }
+
+    public static EmployeeTable forAttendanceSelection() {
+        return new EmployeeTable(false, true, false);
+    }
+
+    public static EmployeeTable forLeaveSelection() {
+        return new EmployeeTable(false, false, true);
+    }
+
+    private EmployeeTable(boolean openedFromPayslip, boolean openedFromAttendance, boolean openedFromLeave) {
+        this(openedFromPayslip, openedFromAttendance, openedFromLeave, new EmployeeManagementService());
+    }
+    
+    private EmployeeTable(boolean openedFromPayslip, boolean openedFromAttendance, boolean openedFromLeave, IEmployeeManagementService employeeService) {
         this.openedFromPayslip = openedFromPayslip;
+        this.openedFromAttendance = openedFromAttendance;
+        this.openedFromLeave = openedFromLeave;
+        this.employeeService = employeeService;
+        this.addemp = new AddEmployee(employeeService);
         instance = this;
         initComponents();
+        WindowNavigation.installReturnToMainMenuOnClose(this);
+        applyActionButtonSizes();
         
         setupTableColumns();
         loadEmployeeData();
-        
         
         // Safety Check
         if (model.User.getLoggedInUser() == null) {
@@ -48,10 +72,17 @@ public class EmployeeTable extends javax.swing.JFrame {
             return;
         }
 
-         
         applyRoleRestrictions();
         applyEntryModeRestrictions();
+        jButtonUpdate.setVisible(false);
+        jButtonUpdate.setEnabled(false);
         this.setLocationRelativeTo(null);
+    }
+
+    private void applyActionButtonSizes() {
+        jButtonView.setMinimumSize(ACTION_BUTTON_SIZE);
+        jButtonView.setPreferredSize(ACTION_BUTTON_SIZE);
+        jButtonView.setMaximumSize(ACTION_BUTTON_SIZE);
     }
     
     private void setupTableColumns() {
@@ -64,24 +95,24 @@ public class EmployeeTable extends javax.swing.JFrame {
     }
     
     public void loadEmployeeData() {
-    try {
-        DefaultTableModel model = (DefaultTableModel) jTableEmp.getModel();
-        model.setRowCount(0);
+        try {
+            DefaultTableModel model = (DefaultTableModel) jTableEmp.getModel();
+            model.setRowCount(0);
 
-        EmployeeRepository repo = new EmployeeRepository();
-        List<Employee> list = repo.findAll();
+            // Use service to load employee data
+            List<Employee> list = employeeService.getAllEmployees();
 
-        System.out.println("DEBUG: Employees found: " + list.size()); // Check NetBeans Output window!
+            System.out.println("DEBUG: Employees found: " + list.size());
 
-        for (Employee emp : list) {
-    model.addRow(new Object[]{
-        emp.getEmployeeNumber(),   // Col 0
-        emp.getLastName(),         // Col 1
-        emp.getFirstName(),        // Col 2
-        emp.getPhoneNumber(),      // Col 3
-        emp.getStatus(),           // Col 4
-        emp.getRole(),             // Col 5
-        "N/A"                      // Col 6 
+            for (Employee emp : list) {
+                model.addRow(new Object[]{
+                    emp.getEmployeeNumber(),   // Col 0
+                    emp.getLastName(),         // Col 1
+                    emp.getFirstName(),        // Col 2
+                    emp.getPhoneNumber(),      // Col 3
+                    emp.getStatus(),           // Col 4
+                    emp.getPosition(),         // Col 5
+        emp.getSupervisor()        // Col 6 
     });
 }
     } catch (Exception e) {
@@ -98,24 +129,22 @@ public class EmployeeTable extends javax.swing.JFrame {
         return;
     }
         String role = currentUser.getRole().toUpperCase().trim();
-        
 
-        // Rule: Only HR can Add, Delete, or Update
-        if (!role.equals("HR")) {
-            jButtonAdd.setEnabled(false);
-            jButtonDelete.setEnabled(false);
-            
-            // For Admin/Finance/IT/Employee, "Update" button effectively becomes a "View" button
-            jButtonUpdate.setText("View Details"); 
-        }
+        boolean isHR = role.equals("HR");
+        // Only HR can see and use Add/Update/Delete.
+        jButtonAdd.setVisible(isHR);
+        jButtonAdd.setEnabled(isHR);
+        jButtonUpdate.setVisible(false);
+        jButtonUpdate.setEnabled(false);
+        jButtonDelete.setVisible(isHR);
+        jButtonDelete.setEnabled(isHR);
     }
 
     private void applyEntryModeRestrictions() {
-        if (openedFromPayslip) {
-            java.awt.Dimension regularButtonSize = new java.awt.Dimension(95, 34);
-            jButtonView.setMinimumSize(regularButtonSize);
-            jButtonView.setPreferredSize(regularButtonSize);
-            jButtonView.setMaximumSize(regularButtonSize);
+        if (openedFromPayslip || openedFromAttendance || openedFromLeave) {
+            jButtonView.setMinimumSize(ACTION_BUTTON_SIZE);
+            jButtonView.setPreferredSize(ACTION_BUTTON_SIZE);
+            jButtonView.setMaximumSize(ACTION_BUTTON_SIZE);
 
             jButtonAdd.setVisible(false);
             jButtonDelete.setVisible(false);
@@ -302,12 +331,10 @@ public class EmployeeTable extends javax.swing.JFrame {
     }// </editor-fold>//GEN-END:initComponents
 
     private void jButtonExitActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButtonExitActionPerformed
-        // TODO add your handling code here:
         dispose ();
     }//GEN-LAST:event_jButtonExitActionPerformed
 
     private void jButtonAddActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButtonAddActionPerformed
-        // TODO add your handling code here:
         addemp.setVisible(true);
     }//GEN-LAST:event_jButtonAddActionPerformed
 
@@ -325,6 +352,20 @@ public class EmployeeTable extends javax.swing.JFrame {
             new Payslip(String.valueOf(empNum)).setVisible(true);
             return;
         }
+        
+        if (openedFromAttendance) {
+            new Attendance(String.valueOf(empNum), true).setVisible(true);
+            WindowNavigation.suppressReturnToMainMenuOnClose(this);
+            this.dispose();
+            return;
+        }
+        
+        if (openedFromLeave) {
+            new LeaveRequests(empNum, true).setVisible(true);
+            WindowNavigation.suppressReturnToMainMenuOnClose(this);
+            this.dispose();
+            return;
+        }
 
         // SAFE ROLE CHECK
         boolean isReadOnly = true; // Default to safe/read-only
@@ -339,7 +380,7 @@ public class EmployeeTable extends javax.swing.JFrame {
             System.out.println("DEBUG: No user logged in, defaulting to Read-Only.");
         }
 
-        new EditEmpInfo(empNum, isReadOnly).setVisible(true);
+        new EditEmpInfo(empNum, isReadOnly, true).setVisible(true);
 
     } catch (Exception e) {
         JOptionPane.showMessageDialog(this, "Error: " + e.getMessage());
@@ -380,7 +421,7 @@ public class EmployeeTable extends javax.swing.JFrame {
         }
 
         // 4. Open the window
-        new EditEmpInfo(empNum, isReadOnly).setVisible(true);
+        new EditEmpInfo(empNum, isReadOnly, true).setVisible(true);
 
     } catch (Exception e) {
         JOptionPane.showMessageDialog(this, "Error during update: " + e.getMessage());
@@ -395,10 +436,13 @@ public class EmployeeTable extends javax.swing.JFrame {
             int confirm = JOptionPane.showConfirmDialog(this, "Delete employee " + empNum + "?", "Confirm", JOptionPane.YES_NO_OPTION);
             
             if (confirm == JOptionPane.YES_OPTION) {
-                EmployeeRepository repo = new EmployeeRepository();
-                repo.delete(empNum);
-                loadEmployeeData(); // Fixed: changed from refreshEmployeeData() to loadEmployeeData()
-                JOptionPane.showMessageDialog(this, "Deleted successfully.");
+                boolean deleted = employeeService.deleteEmployeeAndLogin(empNum);
+                if (deleted) {
+                    loadEmployeeData();
+                    JOptionPane.showMessageDialog(this, "Deleted successfully.");
+                } else {
+                    JOptionPane.showMessageDialog(this, "Failed to delete employee record.", "Delete Failed", JOptionPane.ERROR_MESSAGE);
+                }
             }
         }
     }//GEN-LAST:event_jButtonDeleteActionPerformed

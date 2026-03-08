@@ -2,31 +2,16 @@
 
 package view;
 
-import model.*;
-import repository.*;
-import javax.swing.JOptionPane;
-import java.util.List;
-import java.util.ArrayList;
-
-
-import view.Attendance;
-import view.LoginScreen1;
-import model.User;
 import model.Employee;
 import javax.swing.JOptionPane;
-import java.util.List;
-import java.util.ArrayList;
-import model.AdminStaff;
-import model.FinanceStaff;
-import model.HRStaff;
-import model.ITStaff;
-import model.RegularEmployee;
-import repository.AttendanceRepository;
-import view.EditEmpInfo;
-import view.EmployeeTable;
-import view.Payslip;
 import java.awt.Desktop;
 import java.net.URI;
+import service.IAttendanceService;
+import service.AttendanceService;
+import service.IEmployeeManagementService;
+import service.EmployeeManagementService;
+import service.ISalaryService;
+import service.SalaryService;
 
 
 public class MainMenu extends javax.swing.JFrame {
@@ -37,124 +22,56 @@ public class MainMenu extends javax.swing.JFrame {
     
     
 
-    // GUI modules
-    private EmployeeTable femptable;
-    private Payslip fpayslip;
-    private Attendance fattendance;
+    // Services
+    private final IAttendanceService attendanceService;
+    private final IEmployeeManagementService employeeService;
+    private final ISalaryService salaryService;
 
     //Default constructor (optional for testing or fallback)
     public MainMenu() {
-        initComponents();
-        // Fetch the globally stored user session
-        this.currentUser = model.User.getLoggedInUser(); 
-        updateWelcomeMessage();
-        applyRolePermissions();
+        this(model.User.getLoggedInUser(), 
+             new AttendanceService(), 
+             new EmployeeManagementService(), 
+             new SalaryService());
      
     }
 
     //Constructor with user info passed from Login
 
     public MainMenu(Employee employee) {
+        this(employee, 
+             new AttendanceService(), 
+             new EmployeeManagementService(), 
+             new SalaryService());
+    }
+    
+    //Constructor with dependency injection
+    public MainMenu(Employee employee, IAttendanceService attendanceService, 
+                    IEmployeeManagementService employeeService, ISalaryService salaryService) {
         this.currentUser = employee;
+        this.attendanceService = attendanceService;
+        this.employeeService = employeeService;
+        this.salaryService = salaryService;
         initComponents();
-        initModules();
         updateWelcomeMessage();
         applyRolePermissions();
     }
 
-private void updateWelcomeMessage() {
-        if (currentUser != null && jLabelWelcome != null) {
-            jLabelWelcome.setText("Welcome, " + currentUser.getFirstName() + " " + currentUser.getLastName());
-        } else if (jLabelWelcome != null) { 
-            jLabelWelcome.setText("Welcome, Guest");
+    private void updateWelcomeMessage() {
+        if (jLabelWelcome != null) {
+            jLabelWelcome.setText("Motor PH Payroll System");
         }
     }
-        private void applyRolePermissions() {
-        
-        if (currentUser == null)return;
-        
-           // Check for high-level roles
-            boolean isAdmin = (currentUser instanceof AdminStaff);
-            boolean isIT = (currentUser instanceof ITStaff);
-            boolean isFinance = (currentUser instanceof FinanceStaff);
-            boolean isHR = (currentUser instanceof HRStaff);
-
-            // IT and Admin see User Management
-            jButtonUserManagement.setVisible(isIT || isAdmin);
-            
-
-            // Finance and Admin see Reports
-            jButtonReports.setVisible(isFinance || isAdmin);
-            
-            if (currentUser instanceof ITStaff){
+    
+    private void applyRolePermissions() {
+        if (currentUser == null) return;
+        jButtonUserManagement.setVisible(currentUser.canManageSystem());
+        jButtonReports.setVisible(currentUser.canViewReports());
+        if (currentUser.shouldUseMyProfileLabel()) {
             jButtonEmployee.setText("My Profile");
-            jButtonReports.setVisible(false);
-            }
-            
-            if (currentUser instanceof FinanceStaff){
-            jButtonUserManagement.setVisible(false);
-            }
-
-            
-            if (currentUser instanceof RegularEmployee || currentUser instanceof ProbationaryEmployee) {
-            jButtonEmployee.setText("My Profile");
-            // Explicitly hide administrative buttons
-            jButtonReports.setVisible(false);
-            jButtonUserManagement.setVisible(false);
-            
-            
         }
     }
 
-    // Initializes form modules
-    private void initModules() {
-        femptable = new EmployeeTable();
-        fpayslip = new Payslip();
-        fattendance = new Attendance();
-    }
-    
-    private void openAttendanceForSupervisedEmployee() {
-    String supervisorName = User.getLoggedInUser().getLastName().trim() + "  " + User.getLoggedInUser().getFirstName().trim();
-    List<Employee> supervised = new ArrayList<>();
-
-    for (Employee emp : new repository.EmployeeRepository().findAll()) {
-        if (emp.getSupervisor().trim().equalsIgnoreCase(supervisorName)) {
-            supervised.add(emp);
-        }
-    }
-
-    if (supervised.isEmpty()) {
-        JOptionPane.showMessageDialog(this, "No supervised employees found.", "Info", JOptionPane.INFORMATION_MESSAGE);
-        return;
-    }
-
-    String[] namesWithIDs = supervised.stream()
-        .map(e -> e.getFirstName() + " " + e.getLastName() + " (" + e.getEmployeeNumber() + ")")
-        .toArray(String[]::new);
-
-    String selection = (String) JOptionPane.showInputDialog(
-        this,
-        "Select an employee:",
-        "Attendance Viewer",
-        JOptionPane.PLAIN_MESSAGE,
-        null,
-        namesWithIDs,
-        namesWithIDs[0]
-    );
-
-    if (selection != null && !selection.trim().isEmpty()) {
-        String empId = selection.replaceAll(".*\\((\\d+)\\).*", "$1"); // Extract numeric ID
-        new Attendance(empId).setVisible(true);
-    }
-}
-    
-    
-    
-    private AttendanceRepository attendanceRepo = new AttendanceRepository();
-    private java.time.format.DateTimeFormatter dateFormatter = java.time.format.DateTimeFormatter.ofPattern("MM/dd/yyyy");
-    private java.time.format.DateTimeFormatter timeFormatter = java.time.format.DateTimeFormatter.ofPattern("HH:mm");
-
-    
     // In EditEmpInfo.java
 
     /**
@@ -315,7 +232,7 @@ private void updateWelcomeMessage() {
         jButtonUserManagement.setBackground(new java.awt.Color(14, 49, 113));
         jButtonUserManagement.setFont(new java.awt.Font("Segoe UI", 1, 14)); // NOI18N
         jButtonUserManagement.setForeground(new java.awt.Color(255, 255, 255));
-        jButtonUserManagement.setText("User Management");
+        jButtonUserManagement.setText("Manage System");
         jButtonUserManagement.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
                 jButtonUserManagementActionPerformed(evt);
@@ -410,34 +327,39 @@ private void updateWelcomeMessage() {
     }// </editor-fold>//GEN-END:initComponents
 
     private void jButtonTimeinActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButtonTimeinActionPerformed
-        String empId = String.valueOf(currentUser.getEmployeeNumber());
-        String firstName = currentUser.getFirstName();
-        String lastName = currentUser.getLastName();
-        String today = java.time.LocalDate.now().format(java.time.format.DateTimeFormatter.ofPattern("MM/dd/yyyy"));
-        String now = java.time.LocalTime.now().format(java.time.format.DateTimeFormatter.ofPattern("HH:mm"));
-
-        // Create record with FULL details
-        AttendanceRecord record = new AttendanceRecord(empId, lastName, firstName, today, now, "N/A");
-
-        new AttendanceRepository().save(record);
-        JOptionPane.showMessageDialog(this, "Time In Recorded for " + firstName + " " + lastName);
+        attendanceService.recordTimeIn(currentUser);
+        JOptionPane.showMessageDialog(this, "Time In Recorded for " + currentUser.getFirstName() + " " + currentUser.getLastName());
 
     }//GEN-LAST:event_jButtonTimeinActionPerformed
 
     private void jButtonEmployeeActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButtonEmployeeActionPerformed
                                     
     // 1. Define who gets the "Master View"
-    boolean hasMasterAccess = (currentUser instanceof AdminStaff || 
-                               currentUser instanceof HRStaff || 
-                               currentUser instanceof FinanceStaff);
+    boolean hasMasterAccess = currentUser.canViewMasterEmployeeInfo();
 
     if (hasMasterAccess) {
-        // Admins, Finance, and HR see the full searchable table
-        EmployeeTable fullEmployeeTable = new EmployeeTable(false);
-        fullEmployeeTable.setVisible(true);
-        fullEmployeeTable.setLocationRelativeTo(null);
+        Object[] options = {"View My Own", "View Other Employee"};
+        int choice = JOptionPane.showOptionDialog(
+                this,
+                "Select Access Mode",
+                "Employee Information",
+                JOptionPane.YES_NO_OPTION,
+                JOptionPane.QUESTION_MESSAGE,
+                null,
+                options,
+                options[0]);
+
+        if (choice == JOptionPane.YES_OPTION) {
+            EditEmpInfo editInfo = new EditEmpInfo(currentUser.getEmployeeNumber(), true);
+            editInfo.setVisible(true);
+            editInfo.setLocationRelativeTo(null);
+        } else if (choice == JOptionPane.NO_OPTION) {
+            EmployeeTable fullEmployeeTable = new EmployeeTable(false);
+            fullEmployeeTable.setVisible(true);
+            fullEmployeeTable.setLocationRelativeTo(null);
+        }
     } else {
-        // Regular OR Probationary employees see ONLY their own record
+        // IT, Regular, and Probationary users see ONLY their own record
         // This opens the edit screen in "Read-Only" or "Self-Service" mode
         EditEmpInfo editInfo = new EditEmpInfo(currentUser.getEmployeeNumber(), true);
         editInfo.setVisible(true);
@@ -461,21 +383,50 @@ private void updateWelcomeMessage() {
         
 
     private void jButtonAttendanceActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButtonAttendanceActionPerformed
-          
-         if (currentUser != null) {
-        // Pass the actual ID to the Attendance constructor
-        Attendance fattendance = new Attendance(String.valueOf(currentUser.getEmployeeNumber())); 
-        fattendance.setVisible(true);
-        this.dispose(); 
-    }
+        if (currentUser == null) {
+            return;
+        }
+
+        String currentEmpId = String.valueOf(currentUser.getEmployeeNumber());
+        String role = currentUser.getRole() == null ? "" : currentUser.getRole().trim().toUpperCase();
+        boolean canSelectOtherEmployeeForAttendance = "ADMIN".equals(role) || "FINANCE".equals(role);
+
+        if (canSelectOtherEmployeeForAttendance) {
+            Object[] options = {"View My Own", "View Other Employee"};
+            int choice = JOptionPane.showOptionDialog(
+                    this,
+                    "Select Access Mode",
+                    "Attendance",
+                    JOptionPane.YES_NO_OPTION,
+                    JOptionPane.QUESTION_MESSAGE,
+                    null,
+                    options,
+                    options[0]);
+
+            if (choice == JOptionPane.YES_OPTION) {
+                Attendance attendanceView = new Attendance(currentEmpId, true);
+                attendanceView.setVisible(true);
+                this.setVisible(false);
+            } else if (choice == JOptionPane.NO_OPTION) {
+                EmployeeTable attendanceEmployeeView = EmployeeTable.forAttendanceSelection();
+                attendanceEmployeeView.setVisible(true);
+                attendanceEmployeeView.setLocationRelativeTo(null);
+                this.setVisible(false);
+            }
+        } else {
+            Attendance attendanceView = new Attendance(currentEmpId, true);
+            attendanceView.setVisible(true);
+            this.setVisible(false);
+        }
         
     }//GEN-LAST:event_jButtonAttendanceActionPerformed
 
     private void jButtonPayslipActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButtonPayslipActionPerformed
-        // Polymorphic check: ADMIN, HR, and FINANCE have special access
         String currentEmpId = String.valueOf(currentUser.getEmployeeNumber());
+        String role = currentUser.getRole() == null ? "" : currentUser.getRole().trim().toUpperCase();
+        boolean canSelectOtherEmployeeForPayslip = "ADMIN".equals(role) || "FINANCE".equals(role);
         
-        if (currentUser instanceof AdminStaff || currentUser instanceof HRStaff || currentUser instanceof FinanceStaff) {
+        if (canSelectOtherEmployeeForPayslip) {
             Object[] options = {"View My Own", "View Other Employee"};
             int choice = JOptionPane.showOptionDialog(this, "Select Access Mode", "Payroll",
                     JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE, null, options, options[0]);
@@ -506,37 +457,60 @@ private void updateWelcomeMessage() {
     }//GEN-LAST:event_jButtonReportsActionPerformed
 
     private void jButtonUserManagementActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButtonUserManagementActionPerformed
-        // TODO add your handling code here:
-        JOptionPane.showMessageDialog(this, "Opening User Management Module...");
+        try {
+            URI manageSystemUrl = new URI("https://narrow-drums-28341315.figma.site");
+            if (Desktop.isDesktopSupported() && Desktop.getDesktop().isSupported(Desktop.Action.BROWSE)) {
+                Desktop.getDesktop().browse(manageSystemUrl);
+            } else {
+                JOptionPane.showMessageDialog(this, "Opening a browser is not supported on this device.");
+            }
+        } catch (Exception ex) {
+            JOptionPane.showMessageDialog(this, "Unable to open Manage System URL: " + ex.getMessage());
+        }
     }//GEN-LAST:event_jButtonUserManagementActionPerformed
 
     private void jButtonTimeOutActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButtonTimeOutActionPerformed
-        String empId = String.valueOf(currentUser.getEmployeeNumber());
-        String lastName = currentUser.getLastName();   // Add this
-        String firstName = currentUser.getFirstName(); // Add this
-
-        String today = java.time.LocalDate.now().format(java.time.format.DateTimeFormatter.ofPattern("MM/dd/yyyy"));
-        String now = java.time.LocalTime.now().format(java.time.format.DateTimeFormatter.ofPattern("HH:mm"));
-
-        // 4. Use "N/A" for LogIn so the repository knows NOT to overwrite the morning's time
-        model.AttendanceRecord record = new model.AttendanceRecord(empId, lastName, firstName, today, "N/A", now);
-
-        new repository.AttendanceRepository().update(record);
-
+        attendanceService.recordTimeOut(currentUser);
         javax.swing.JOptionPane.showMessageDialog(this, "Time Out Recorded!");
     }//GEN-LAST:event_jButtonTimeOutActionPerformed
 
     private void btnLeaveRequestActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnLeaveRequestActionPerformed
-        // TODO add your handling code here:                                         
+        if (currentUser == null) {
+            return;
+        }
 
+        String role = currentUser.getRole() == null ? "" : currentUser.getRole().trim().toUpperCase();
         int empId = this.currentUser.getEmployeeNumber();
-    
-        // 2. Pass the ID to the LeaveRequests constructor
+
+        // Prompt only for Admin and HR.
+        if ("ADMIN".equals(role) || "HR".equals(role)) {
+            Object[] options = {"View My Own", "View Other Employee"};
+            int choice = JOptionPane.showOptionDialog(
+                    this,
+                    "Select Access Mode",
+                    "Leave Application",
+                    JOptionPane.YES_NO_OPTION,
+                    JOptionPane.QUESTION_MESSAGE,
+                    null,
+                    options,
+                    options[0]);
+
+            if (choice == JOptionPane.YES_OPTION) {
+                view.LeaveRequests leaveWindow = new view.LeaveRequests(empId);
+                leaveWindow.setVisible(true);
+                this.setVisible(false);
+            } else if (choice == JOptionPane.NO_OPTION) {
+                EmployeeTable leaveEmployeeView = EmployeeTable.forLeaveSelection();
+                leaveEmployeeView.setVisible(true);
+                leaveEmployeeView.setLocationRelativeTo(null);
+                this.setVisible(false);
+            }
+            return;
+        }
+
         view.LeaveRequests leaveWindow = new view.LeaveRequests(empId);
         leaveWindow.setVisible(true);
-
-        // 3. Optional: Close the MainMenu
-        this.dispose(); 
+        this.setVisible(false);
     }//GEN-LAST:event_btnLeaveRequestActionPerformed
 
     /**

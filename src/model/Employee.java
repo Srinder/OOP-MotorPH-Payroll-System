@@ -87,6 +87,33 @@ public abstract class Employee implements ICalculatable {
     public String getFullName(){
         return firstName + " " + lastName;
     }
+
+    public boolean canManageSystem() {
+        return "IT".equalsIgnoreCase(getRole());
+    }
+
+    public boolean canViewReports() {
+        String role = getRole();
+        return "ADMIN".equalsIgnoreCase(role) || "FINANCE".equalsIgnoreCase(role);
+    }
+
+    public boolean shouldUseMyProfileLabel() {
+        String role = getRole();
+        return "IT".equalsIgnoreCase(role)
+                || "REGULAR".equalsIgnoreCase(role)
+                || "PROBATIONARY".equalsIgnoreCase(role);
+    }
+
+    public boolean canViewMasterEmployeeInfo() {
+        String role = getRole();
+        return "ADMIN".equalsIgnoreCase(role)
+                || "HR".equalsIgnoreCase(role)
+                || "FINANCE".equalsIgnoreCase(role);
+    }
+
+    public boolean canViewOtherEmployeePayslip() {
+        return canViewMasterEmployeeInfo();
+    }
     
     //Calculate Total Allowances
     public double getTotalAllowances(){
