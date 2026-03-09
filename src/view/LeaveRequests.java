@@ -26,7 +26,7 @@ public class LeaveRequests extends javax.swing.JFrame {
         this.currentEmployeeID = empId;
         this.statusOnlyMode = statusOnlyMode;
         initComponents(); 
-        WindowNavigation.installReturnToMainMenuOnClose(this);
+        util.WindowNavigation.installReturnToMainMenuOnClose(this);
         
         
 
@@ -244,58 +244,68 @@ public class LeaveRequests extends javax.swing.JFrame {
     private int getColumnIndexStatus() { return statusOnlyMode ? 6 : 5; }
     private int getColumnIndexReason() { return statusOnlyMode ? 7 : 6; }
 
-    private void processSelectedRequests(String targetStatus) {
+    private void refreshViewData() {
+        loadTableData();
+        updateSummaryCards();
+    }
+
+    private java.util.List<model.LeaveRequest> collectSelectedRequestsForStatusMode() {
         if (!statusOnlyMode) {
-            return;
+            return java.util.Collections.emptyList();
         }
 
-        // Commit active checkbox edit before reading table values.
         if (tblLeaveHistory.isEditing() && tblLeaveHistory.getCellEditor() != null) {
             tblLeaveHistory.getCellEditor().stopCellEditing();
         }
 
         javax.swing.table.DefaultTableModel model = (javax.swing.table.DefaultTableModel) tblLeaveHistory.getModel();
         java.util.Set<Integer> selectedRows = new java.util.LinkedHashSet<>();
-
-        // Primary: checkbox selections.
         for (int row = 0; row < model.getRowCount(); row++) {
             Object selected = model.getValueAt(row, 0);
             if (Boolean.TRUE.equals(selected)) {
                 selectedRows.add(row);
             }
         }
-
-        // Fallback: currently highlighted rows (if user multi-selected rows).
         for (int row : tblLeaveHistory.getSelectedRows()) {
             selectedRows.add(row);
         }
 
-        if (selectedRows.isEmpty()) {
-            javax.swing.JOptionPane.showMessageDialog(this, "Select at least one request.");
+        java.util.List<Object[]> selectedRowsData = new java.util.ArrayList<>();
+        for (Integer row : selectedRows) {
+            selectedRowsData.add(new Object[]{
+                    model.getValueAt(row, 0),
+                    model.getValueAt(row, getColumnIndexEid()),
+                    model.getValueAt(row, getColumnIndexLeaveType()),
+                    model.getValueAt(row, getColumnIndexStartDate()),
+                    model.getValueAt(row, getColumnIndexEndDate()),
+                    null,
+                    model.getValueAt(row, getColumnIndexStatus()),
+                    model.getValueAt(row, getColumnIndexReason())
+            });
+        }
+        return leaveService.mapRowsToLeaveRequests(selectedRowsData, true);
+    }
+
+    private Integer parseSelectedRequestEmployeeId(int selectedRow) {
+        try {
+            return Integer.parseInt(String.valueOf(tblLeaveHistory.getValueAt(selectedRow, getColumnIndexEid())).trim());
+        } catch (Exception ex) {
+            return null;
+        }
+    }
+
+    private void processSelectedRequests(String targetStatus) {
+        if (!statusOnlyMode) {
             return;
         }
 
-        java.util.List<model.LeaveRequest> selectedRequests = new java.util.ArrayList<>();
-        for (Integer row : selectedRows) {
-            int empId;
-            try {
-                empId = Integer.parseInt(String.valueOf(model.getValueAt(row, getColumnIndexEid())).trim());
-            } catch (Exception ex) {
-                continue;
-            }
-            selectedRequests.add(new model.LeaveRequest(
-                    empId,
-                    String.valueOf(model.getValueAt(row, getColumnIndexLeaveType())),
-                    String.valueOf(model.getValueAt(row, getColumnIndexStartDate())),
-                    String.valueOf(model.getValueAt(row, getColumnIndexEndDate())),
-                    String.valueOf(model.getValueAt(row, getColumnIndexReason())),
-                    String.valueOf(model.getValueAt(row, getColumnIndexStatus()))
-            ));
+        java.util.List<model.LeaveRequest> selectedRequests = collectSelectedRequestsForStatusMode();
+        if (selectedRequests.isEmpty()) {
+            javax.swing.JOptionPane.showMessageDialog(this, "Select at least one request.");
+            return;
         }
         int updated = leaveService.processStatusUpdates(selectedRequests, targetStatus);
-
-        loadTableData();
-        updateSummaryCards();
+        refreshViewData();
         if (updated == 0) {
             javax.swing.JOptionPane.showMessageDialog(this, "No pending requests were updated.");
         }
@@ -758,9 +768,7 @@ public class LeaveRequests extends javax.swing.JFrame {
 
         if (success) {
             javax.swing.JOptionPane.showMessageDialog(this, "Leave Request Submitted Successfully!");
-            // 5. Refresh the UI
-            loadTableData();
-            updateSummaryCards();
+            refreshViewData();
             clearForm();
         } else {
             javax.swing.JOptionPane.showMessageDialog(this, "Insufficient leave credits!");
@@ -783,10 +791,8 @@ public class LeaveRequests extends javax.swing.JFrame {
         int selectedRow = tblLeaveHistory.getSelectedRow();
 
         if (selectedRow != -1) {
-            int requestEmployeeId;
-            try {
-                requestEmployeeId = Integer.parseInt(String.valueOf(tblLeaveHistory.getValueAt(selectedRow, getColumnIndexEid())).trim());
-            } catch (Exception ex) {
+            Integer requestEmployeeId = parseSelectedRequestEmployeeId(selectedRow);
+            if (requestEmployeeId == null) {
                 javax.swing.JOptionPane.showMessageDialog(this, "Unable to read selected request.");
                 return;
             }
@@ -805,8 +811,7 @@ public class LeaveRequests extends javax.swing.JFrame {
                         requestStartDate,
                         requestStatus);
                 if (result == ILeaveManagement.CANCEL_SUCCESS) {
-                    loadTableData();
-                    updateSummaryCards();
+                    refreshViewData();
                     clearForm();
                     tblLeaveHistory.clearSelection();
                 } else {

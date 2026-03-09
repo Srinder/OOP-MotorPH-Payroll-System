@@ -59,7 +59,7 @@ public class EmployeeTable extends javax.swing.JFrame {
         this.addemp = new AddEmployee(employeeService);
         instance = this;
         initComponents();
-        WindowNavigation.installReturnToMainMenuOnClose(this);
+        util.WindowNavigation.installReturnToMainMenuOnClose(this);
         applyActionButtonSizes();
         
         setupTableColumns();
@@ -161,6 +161,43 @@ public class EmployeeTable extends javax.swing.JFrame {
         jTableEmp.getColumnModel().getColumn(1).setPreferredWidth(120);
         jTableEmp.getColumnModel().getColumn(2).setPreferredWidth(120);
         jTableEmp.getColumnModel().getColumn(6).setPreferredWidth(250);
+    }
+
+    private Integer getSelectedEmployeeNumber() {
+        int selectedRow = jTableEmp.getSelectedRow();
+        if (selectedRow == -1) {
+            return null;
+        }
+        Object value = jTableEmp.getValueAt(selectedRow, 0);
+        if (value == null) {
+            return null;
+        }
+        try {
+            return Integer.parseInt(value.toString().trim());
+        } catch (NumberFormatException ex) {
+            return null;
+        }
+    }
+
+    private boolean isReadOnlyForCurrentUser() {
+        model.Employee currentUser = model.User.getLoggedInUser();
+        if (currentUser == null) {
+            System.out.println("DEBUG: No user logged in, defaulting to Read-Only.");
+            return true;
+        }
+        return currentUser.isReadOnlyInEmployeeEditor();
+    }
+
+    private void openAttendanceSelection(int empNum) {
+        new Attendance(String.valueOf(empNum), true).setVisible(true);
+        util.WindowNavigation.suppressReturnToMainMenuOnClose(this);
+        this.dispose();
+    }
+
+    private void openLeaveSelection(int empNum) {
+        new LeaveRequests(empNum, true).setVisible(true);
+        util.WindowNavigation.suppressReturnToMainMenuOnClose(this);
+        this.dispose();
     }
 
 
@@ -339,48 +376,29 @@ public class EmployeeTable extends javax.swing.JFrame {
     }//GEN-LAST:event_jButtonAddActionPerformed
 
     private void jButtonViewActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButtonViewActionPerformed
-     int selectedRow = jTableEmp.getSelectedRow();
-    if (selectedRow == -1) {
+    Integer empNum = getSelectedEmployeeNumber();
+    if (empNum == null) {
         JOptionPane.showMessageDialog(this, "Please select an employee first.");
         return;
     }
 
     try {
-        int empNum = Integer.parseInt(jTableEmp.getValueAt(selectedRow, 0).toString());
-
         if (openedFromPayslip) {
             new Payslip(String.valueOf(empNum)).setVisible(true);
             return;
         }
         
         if (openedFromAttendance) {
-            new Attendance(String.valueOf(empNum), true).setVisible(true);
-            WindowNavigation.suppressReturnToMainMenuOnClose(this);
-            this.dispose();
+            openAttendanceSelection(empNum);
             return;
         }
         
         if (openedFromLeave) {
-            new LeaveRequests(empNum, true).setVisible(true);
-            WindowNavigation.suppressReturnToMainMenuOnClose(this);
-            this.dispose();
+            openLeaveSelection(empNum);
             return;
         }
 
-        // SAFE ROLE CHECK
-        boolean isReadOnly = true; // Default to safe/read-only
-        model.Employee currentUser = model.User.getLoggedInUser();
-
-        if (currentUser != null) {
-            String role = currentUser.getRole().toUpperCase();
-            // Only Admin and Finance are restricted to Read-Only in this logic
-            isReadOnly = role.equals("FINANCE") || role.equals("ADMIN");
-        } else {
-            // If testing without login, can set this to false to allow editing
-            System.out.println("DEBUG: No user logged in, defaulting to Read-Only.");
-        }
-
-        new EditEmpInfo(empNum, isReadOnly, true).setVisible(true);
+        new EditEmpInfo(empNum, isReadOnlyForCurrentUser(), true).setVisible(true);
 
     } catch (Exception e) {
         JOptionPane.showMessageDialog(this, "Error: " + e.getMessage());
@@ -388,40 +406,14 @@ public class EmployeeTable extends javax.swing.JFrame {
     }//GEN-LAST:event_jButtonViewActionPerformed
 
     private void jButtonUpdateActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButtonUpdateActionPerformed
-            int selectedRow = jTableEmp.getSelectedRow();
-
-    // 1. Safety check: Did they select a row?
-    if (selectedRow == -1) {
+    Integer empNum = getSelectedEmployeeNumber();
+    if (empNum == null) {
         JOptionPane.showMessageDialog(this, "Please select an employee to update.");
         return;
     }
 
     try {
-        // 2. Safety check: Is the ID cell empty?
-        Object value = jTableEmp.getValueAt(selectedRow, 0);
-        if (value == null) {
-            JOptionPane.showMessageDialog(this, "Selected row has no ID data.");
-            return;
-        }
-        
-        int empNum = Integer.parseInt(value.toString());
-
-        // 3. Safety check: Is a user actually logged in?
-        boolean isReadOnly = false; 
-        model.Employee currentUser = model.User.getLoggedInUser();
-
-        if (currentUser != null) {
-            String role = currentUser.getRole().toUpperCase();
-            // Restrict Finance and Admin from editing if that's your rule
-            isReadOnly = role.equals("FINANCE") || role.equals("ADMIN");
-        } else {
-            // If testing without a login, we'll assume full access (false) 
-            // but print a warning in the console.
-            System.out.println("Warning: No logged-in user detected. Defaulting to editable mode.");
-        }
-
-        // 4. Open the window
-        new EditEmpInfo(empNum, isReadOnly, true).setVisible(true);
+        new EditEmpInfo(empNum, isReadOnlyForCurrentUser(), true).setVisible(true);
 
     } catch (Exception e) {
         JOptionPane.showMessageDialog(this, "Error during update: " + e.getMessage());
@@ -430,19 +422,20 @@ public class EmployeeTable extends javax.swing.JFrame {
     }//GEN-LAST:event_jButtonUpdateActionPerformed
 
     private void jButtonDeleteActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButtonDeleteActionPerformed
-    int selectedRow = jTableEmp.getSelectedRow();
-        if (selectedRow != -1) {
-            int empNum = Integer.parseInt(jTableEmp.getValueAt(selectedRow, 0).toString());
-            int confirm = JOptionPane.showConfirmDialog(this, "Delete employee " + empNum + "?", "Confirm", JOptionPane.YES_NO_OPTION);
-            
-            if (confirm == JOptionPane.YES_OPTION) {
-                boolean deleted = employeeService.deleteEmployeeAndLogin(empNum);
-                if (deleted) {
-                    loadEmployeeData();
-                    JOptionPane.showMessageDialog(this, "Deleted successfully.");
-                } else {
-                    JOptionPane.showMessageDialog(this, "Failed to delete employee record.", "Delete Failed", JOptionPane.ERROR_MESSAGE);
-                }
+    Integer empNum = getSelectedEmployeeNumber();
+        if (empNum == null) {
+            JOptionPane.showMessageDialog(this, "Please select an employee first.");
+            return;
+        }
+        int confirm = JOptionPane.showConfirmDialog(this, "Delete employee " + empNum + "?", "Confirm", JOptionPane.YES_NO_OPTION);
+        
+        if (confirm == JOptionPane.YES_OPTION) {
+            boolean deleted = employeeService.deleteEmployeeAndLogin(empNum);
+            if (deleted) {
+                loadEmployeeData();
+                JOptionPane.showMessageDialog(this, "Deleted successfully.");
+            } else {
+                JOptionPane.showMessageDialog(this, "Failed to delete employee record.", "Delete Failed", JOptionPane.ERROR_MESSAGE);
             }
         }
     }//GEN-LAST:event_jButtonDeleteActionPerformed

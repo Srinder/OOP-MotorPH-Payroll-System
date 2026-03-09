@@ -16,6 +16,7 @@ import service.AuthenticationService;
 public class LoginScreen1 extends javax.swing.JFrame {
     private final IAuthenticationService authService;
     private boolean loginInProgress = false;
+    private static final long OTP_EXPIRY_MS = 5 * 60 * 1000;
     
     //Creates new form LoginScreen1
     public LoginScreen1() {
@@ -132,88 +133,22 @@ public class LoginScreen1 extends javax.swing.JFrame {
         jButtonLogin.setEnabled(false);
 
         try {
-            String username = jTextFieldUsername.getText().trim();
-            String password = new String(jPasswordField.getPassword()).trim();
+            String username = getEnteredUsername();
+            String password = getEnteredPassword();
 
-            // Check if account is locked using service
-            if (authService.isAccountLocked(username)) {
-                long secondsRemaining = (authService.getAccountUnlockTime(username) - System.currentTimeMillis()) / 1000;
-                JOptionPane.showMessageDialog(this,
-                    "Your account is temporarily locked.\nPlease try again in " + secondsRemaining + " seconds.",
-                    "Account Locked",
-                    JOptionPane.WARNING_MESSAGE);
+            if (isLoginBlocked(username)) {
                 return;
             }
 
-            // Authenticate using service
             Employee emp = authService.authenticate(username, password);
+            if (emp == null) {
+                showFailedLogin(username);
+                clearLoginInputs();
+                return;
+            }
 
-            if (emp != null) {
-                // Password is correct. Run demo 2FA with local random 6-digit OTP.
-                boolean is2FAEnabledForThisUser = true;
-
-                if (is2FAEnabledForThisUser) {
-                    String otp = authService.generateOtp();
-                    long otpIssuedAt = System.currentTimeMillis();
-                    boolean sent = authService.sendOtpEmail(null, otp);
-                    if (!sent) {
-                        String reason = authService.getLastError();
-                        JOptionPane.showMessageDialog(
-                                this,
-                                "Failed to send verification code.\n"
-                                        + (reason == null || reason.isBlank() ? "Please try again." : reason),
-                                "2FA Error",
-                                JOptionPane.ERROR_MESSAGE);
-                        return;
-                    }
-
-                    JOptionPane.showMessageDialog(
-                            this,
-                            "Demo verification code: " + otp + "\nEnter this 6-digit code in the next prompt.",
-                            "Two-Factor Authentication",
-                            JOptionPane.INFORMATION_MESSAGE);
-
-                    String enteredOTP = JOptionPane.showInputDialog(this, "Enter the 6-digit verification code:");
-                    if (enteredOTP == null || enteredOTP.trim().isEmpty()) {
-                        JOptionPane.showMessageDialog(this, "OTP not entered. Login failed.", "2FA Canceled", JOptionPane.ERROR_MESSAGE);
-                        return;
-                    }
-
-                    if (System.currentTimeMillis() - otpIssuedAt > (5 * 60 * 1000)) {
-                        JOptionPane.showMessageDialog(this, "OTP expired. Please log in again.", "2FA Expired", JOptionPane.ERROR_MESSAGE);
-                        return;
-                    }
-
-                    if (!otp.equals(enteredOTP.trim())) {
-                        JOptionPane.showMessageDialog(this, "Invalid OTP. Login failed.", "2FA Failed", JOptionPane.ERROR_MESSAGE);
-                        return;
-                    }
-
-                    proceedWithSuccessfulLogin(emp, username);
-
-                } else {
-                    // No 2FA conceptually enabled for this user, proceed with regular successful login
-                    proceedWithSuccessfulLogin(emp, username);
-                }
-            } else {
-                // Incorrect login
-                String errorMsg = authService.getLastError();
-                if (authService.getFailedLoginAttempts(username) >= 3) {
-                    JOptionPane.showMessageDialog(this,
-                        "Invalid login 3 times.\nAccount is locked for 5 minutes.\n" +
-                        "Consider resetting your password.",
-                        "Account Temporarily Blocked",
-                        JOptionPane.ERROR_MESSAGE);
-                } else {
-                    JOptionPane.showMessageDialog(this,
-                        errorMsg != null ? errorMsg : "Invalid username or password.",
-                        "Login Failed",
-                        JOptionPane.WARNING_MESSAGE);
-                }
-
-                // Clear fields on login failure for next attempt
-                jTextFieldUsername.setText("");
-                jPasswordField.setText("");
+            if (performTwoFactorChallenge()) {
+                proceedWithSuccessfulLogin(emp, username);
             }
         } finally {
             loginInProgress = false;
@@ -246,35 +181,9 @@ public class LoginScreen1 extends javax.swing.JFrame {
             return;
         }
 
-        String newPassword = null;
-        boolean validPassword = false;
-
-        // Repeat until user enters a valid password or cancels
-        while (!validPassword) {
-            JPasswordField passwordField = new JPasswordField();
-            passwordField.setEchoChar('*'); // Hide characters being typed
-
-            int confirm = JOptionPane.showConfirmDialog(this, passwordField, "Enter your new password:", JOptionPane.OK_CANCEL_OPTION);
-
-            if (confirm != JOptionPane.OK_OPTION) {
-                JOptionPane.showMessageDialog(this, "Password reset canceled.");
-                return;
-            }
-
-            newPassword = new String(passwordField.getPassword()).trim();
-
-            // Use service to validate password
-            if (authService.validatePasswordFormat(newPassword)) {
-                validPassword = true;
-            } else {
-                JOptionPane.showMessageDialog(this,
-                    "Password must meet the following requirements:\n" +
-                    "- Only letters and numbers (no symbols)\n" +
-                    "- At least one uppercase letter\n" +
-                    "- At least one number",
-                    "Invalid Password Format",
-                    JOptionPane.ERROR_MESSAGE);
-            }
+        String newPassword = promptForValidPassword();
+        if (newPassword == null) {
+            return;
         }
 
         // Update password using service
@@ -303,6 +212,112 @@ public class LoginScreen1 extends javax.swing.JFrame {
         main.setLocationRelativeTo(null);
 
         this.dispose(); // Close the current login screen
+    }
+
+    private String getEnteredUsername() {
+        return jTextFieldUsername.getText().trim();
+    }
+
+    private String getEnteredPassword() {
+        return new String(jPasswordField.getPassword()).trim();
+    }
+
+    private void clearLoginInputs() {
+        jTextFieldUsername.setText("");
+        jPasswordField.setText("");
+    }
+
+    private boolean isLoginBlocked(String username) {
+        if (!authService.isAccountLocked(username)) {
+            return false;
+        }
+        long secondsRemaining = (authService.getAccountUnlockTime(username) - System.currentTimeMillis()) / 1000;
+        JOptionPane.showMessageDialog(this,
+                "Your account is temporarily locked.\nPlease try again in " + secondsRemaining + " seconds.",
+                "Account Locked",
+                JOptionPane.WARNING_MESSAGE);
+        return true;
+    }
+
+    private void showFailedLogin(String username) {
+        String errorMsg = authService.getLastError();
+        if (authService.getFailedLoginAttempts(username) >= 3) {
+            JOptionPane.showMessageDialog(this,
+                    "Invalid login 3 times.\nAccount is locked for 5 minutes.\n" +
+                            "Consider resetting your password.",
+                    "Account Temporarily Blocked",
+                    JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+        JOptionPane.showMessageDialog(this,
+                errorMsg != null ? errorMsg : "Invalid username or password.",
+                "Login Failed",
+                JOptionPane.WARNING_MESSAGE);
+    }
+
+    private boolean performTwoFactorChallenge() {
+        String otp = authService.generateOtp();
+        long otpIssuedAt = System.currentTimeMillis();
+        boolean sent = authService.sendOtpEmail(null, otp);
+        if (!sent) {
+            String reason = authService.getLastError();
+            JOptionPane.showMessageDialog(
+                    this,
+                    "Failed to send verification code.\n"
+                            + (reason == null || reason.isBlank() ? "Please try again." : reason),
+                    "2FA Error",
+                    JOptionPane.ERROR_MESSAGE);
+            return false;
+        }
+
+        JOptionPane.showMessageDialog(
+                this,
+                "Demo verification code: " + otp + "\nEnter this 6-digit code in the next prompt.",
+                "Two-Factor Authentication",
+                JOptionPane.INFORMATION_MESSAGE);
+
+        String enteredOTP = JOptionPane.showInputDialog(this, "Enter the 6-digit verification code:");
+        if (enteredOTP == null || enteredOTP.trim().isEmpty()) {
+            JOptionPane.showMessageDialog(this, "OTP not entered. Login failed.", "2FA Canceled", JOptionPane.ERROR_MESSAGE);
+            return false;
+        }
+
+        if (System.currentTimeMillis() - otpIssuedAt > OTP_EXPIRY_MS) {
+            JOptionPane.showMessageDialog(this, "OTP expired. Please log in again.", "2FA Expired", JOptionPane.ERROR_MESSAGE);
+            return false;
+        }
+
+        if (!otp.equals(enteredOTP.trim())) {
+            JOptionPane.showMessageDialog(this, "Invalid OTP. Login failed.", "2FA Failed", JOptionPane.ERROR_MESSAGE);
+            return false;
+        }
+
+        return true;
+    }
+
+    private String promptForValidPassword() {
+        while (true) {
+            JPasswordField passwordField = new JPasswordField();
+            passwordField.setEchoChar('*');
+            int confirm = JOptionPane.showConfirmDialog(this, passwordField, "Enter your new password:", JOptionPane.OK_CANCEL_OPTION);
+            if (confirm != JOptionPane.OK_OPTION) {
+                JOptionPane.showMessageDialog(this, "Password reset canceled.");
+                return null;
+            }
+
+            String newPassword = new String(passwordField.getPassword()).trim();
+            if (authService.validatePasswordFormat(newPassword)) {
+                return newPassword;
+            }
+
+            JOptionPane.showMessageDialog(this,
+                    "Password must meet the following requirements:\n" +
+                            "- Only letters and numbers (no symbols)\n" +
+                            "- At least one uppercase letter\n" +
+                            "- At least one number",
+                    "Invalid Password Format",
+                    JOptionPane.ERROR_MESSAGE);
+        }
     }
 
     /**

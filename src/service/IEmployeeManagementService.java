@@ -5,6 +5,7 @@ package service;
 import model.Employee;
 import java.util.List;
 import java.util.Optional;
+import javax.swing.text.JTextComponent;
 
 public interface IEmployeeManagementService {
     
@@ -68,4 +69,8 @@ public interface IEmployeeManagementService {
     boolean validateEmployeeData(Employee employee);
     
     List<Employee> searchEmployees(String searchTerm);
+
+    void applyDigitGroupMask(JTextComponent field, int[] groups, String formatHint);
+
+    Optional<Employee> getEmployeeByRawId(String rawEmployeeId);
 }

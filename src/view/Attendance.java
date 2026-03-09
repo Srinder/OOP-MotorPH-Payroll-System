@@ -6,9 +6,6 @@ import java.util.List;
 import java.time.LocalDate;
 import javax.swing.JOptionPane;
 import javax.swing.table.DefaultTableModel;
-import model.AdminStaff;
-import model.HRStaff;
-import model.FinanceStaff;
 import service.IAttendanceService;
 import service.AttendanceService;
 import java.util.ArrayList;
@@ -31,7 +28,7 @@ public class Attendance extends JFrame {
         this.empNo = empNo;
         this.attendanceService = attendanceService;
         initComponents();
-        WindowNavigation.installReturnToMainMenuOnClose(this);
+        util.WindowNavigation.installReturnToMainMenuOnClose(this);
 
         // Identify the user and their role
         model.Employee current = model.User.getLoggedInUser();
@@ -88,10 +85,7 @@ public class Attendance extends JFrame {
 
     private boolean isPowerUser() {
         model.Employee current = model.User.getLoggedInUser();
-        if (current == null) return false;
-        return (current instanceof AdminStaff || 
-                current instanceof HRStaff || 
-                current instanceof FinanceStaff);
+        return current != null && current.canManageAttendanceRecords();
     }
 
     private void loadEmployeeName() {
@@ -118,26 +112,54 @@ public class Attendance extends JFrame {
             return;
         }
 
-        List<AttendanceRecord> records = attendanceService.getAttendanceRecords(targetEmpNo, startDate, endDate);
-        int targetEmpId;
-        try {
-            targetEmpId = Integer.parseInt(targetEmpNo.trim());
-        } catch (NumberFormatException ex) {
-            targetEmpId = -1;
+        for (Object[] row : attendanceService.buildAttendanceTableRows(targetEmpNo, startDate, endDate)) {
+            model.addRow(row);
         }
-        for (AttendanceRecord record : records) {
-            java.util.Map<String, Double> metrics = targetEmpId > 0
-                    ? attendanceService.computeDailyAttendanceMinutes(targetEmpId, record.getDate())
-                    : java.util.Map.of("Late", 0.0, "Overtime", 0.0, "Undertime", 0.0);
-            model.addRow(new Object[]{
-                record.getDate(),
-                record.getLogIn(),
-                record.getLogOut(),
-                metrics.get("Late"),
-                metrics.get("Overtime"),
-                metrics.get("Undertime")
-            });
+    }
+    private LocalDate getSelectedStartDateOrDefault() {
+        return startDateLabel.getDate() != null
+                ? startDateLabel.getDate().toInstant().atZone(java.time.ZoneId.systemDefault()).toLocalDate()
+                : LocalDate.now().minusMonths(1);
+    }
+
+    private LocalDate getSelectedEndDateOrDefault() {
+        return endDateLabel.getDate() != null
+                ? endDateLabel.getDate().toInstant().atZone(java.time.ZoneId.systemDefault()).toLocalDate()
+                : LocalDate.now();
+    }
+
+    private void applyTableEditMode(boolean editable) {
+        DefaultTableModel model = (DefaultTableModel) jTableAttendance.getModel();
+
+        @SuppressWarnings("rawtypes")
+        Vector data = model.getDataVector();
+
+        Vector<String> columnNames = new Vector<>();
+        for (int i = 0; i < model.getColumnCount(); i++) {
+            columnNames.add(model.getColumnName(i));
         }
+
+        DefaultTableModel nextModel = new DefaultTableModel(data, columnNames) {
+            @Override
+            public boolean isCellEditable(int row, int column) {
+                return editable && (column == 1 || column == 2);
+            }
+        };
+
+        jTableAttendance.setModel(nextModel);
+    }
+
+    private List<Object[]> collectEditableRowsFromTable() {
+        DefaultTableModel model = (DefaultTableModel) jTableAttendance.getModel();
+        List<Object[]> rows = new ArrayList<>();
+
+        for (int row = 0; row < model.getRowCount(); row++) {
+            String date = model.getValueAt(row, 0).toString().trim();
+            String logIn = model.getValueAt(row, 1).toString().trim();
+            String logOut = model.getValueAt(row, 2).toString().trim();
+            rows.add(new Object[]{date, logIn, logOut});
+        }
+        return rows;
     }
 
     private void showSearchDialog() {
@@ -326,37 +348,10 @@ public class Attendance extends JFrame {
 
     private void checkAttendanceButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_checkAttendanceButtonActionPerformed
     if (startDateLabel.getDate() != null && endDateLabel.getDate() != null) {
-        LocalDate startDate = startDateLabel.getDate().toInstant()
-                .atZone(java.time.ZoneId.systemDefault())
-                .toLocalDate();
-
-        LocalDate endDate = endDateLabel.getDate().toInstant()
-                .atZone(java.time.ZoneId.systemDefault())
-                .toLocalDate();
-
-        // ✅ Load records
+        LocalDate startDate = getSelectedStartDateOrDefault();
+        LocalDate endDate = getSelectedEndDateOrDefault();
         loadAttendanceRecords(empNo, startDate, endDate);
-
-        DefaultTableModel model = (DefaultTableModel) jTableAttendance.getModel();
-
-        // Lock the table by rebuilding a non-editable model
-        @SuppressWarnings("rawtypes")
-        Vector data = model.getDataVector(); // don't cast to Vector<Vector<Object>> to avoid build error
-
-        Vector<String> columnNames = new Vector<>();
-        for (int i = 0; i < model.getColumnCount(); i++) {
-            columnNames.add(model.getColumnName(i));
-        }
-
-        DefaultTableModel lockedModel = new DefaultTableModel(data, columnNames) {
-            @Override
-            public boolean isCellEditable(int row, int column) {
-                return false; // Prevent editing for all cells
-            }
-        };
-
-        jTableAttendance.setModel(lockedModel);
-
+        applyTableEditMode(false);
     } else {
         JOptionPane.showMessageDialog(this,
                 "Please select both start and end dates.",
@@ -366,25 +361,7 @@ public class Attendance extends JFrame {
     }//GEN-LAST:event_checkAttendanceButtonActionPerformed
 
     private void updateAttendanceButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_updateAttendanceButtonActionPerformed
-    DefaultTableModel model = (DefaultTableModel) jTableAttendance.getModel();
-
-    @SuppressWarnings("rawtypes")
-    Vector data = model.getDataVector();
-
-    Vector<String> columnNames = new Vector<>();
-    for (int i = 0; i < model.getColumnCount(); i++) {
-        columnNames.add(model.getColumnName(i));
-    }
-
-    // ✅ Make only Time In (1) and Time Out (2) editable
-    DefaultTableModel editableModel = new DefaultTableModel(data, columnNames) {
-        @Override
-        public boolean isCellEditable(int row, int column) {
-            return column == 1 || column == 2; // only Time In / Time Out
-        }
-    };
-
-    jTableAttendance.setModel(editableModel);
+    applyTableEditMode(true);
 
     JOptionPane.showMessageDialog(this,
         "Table is now editable. You can update Time In and Time Out.",
@@ -393,40 +370,20 @@ public class Attendance extends JFrame {
     }//GEN-LAST:event_updateAttendanceButtonActionPerformed
 
     private void jButtonSaveActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButtonSaveActionPerformed
-    // Commit active cell edit first; otherwise JTable may keep old value.
     if (jTableAttendance.isEditing() && jTableAttendance.getCellEditor() != null) {
         jTableAttendance.getCellEditor().stopCellEditing();
     }
 
-    DefaultTableModel model = (DefaultTableModel) jTableAttendance.getModel();
-    List<AttendanceRecord> updatedRecords = new ArrayList<>();
-
     String activeEmpNo = this.empNo;
+    List<AttendanceRecord> updatedRecords = attendanceService.mapRowsToAttendanceRecords(activeEmpNo, collectEditableRowsFromTable());
 
-    // Build domain records from editable table values.
-    for (int row = 0; row < model.getRowCount(); row++) {
-    String date = model.getValueAt(row, 0).toString().trim();
-    String logIn = model.getValueAt(row, 1).toString().trim();
-    String logOut = model.getValueAt(row, 2).toString().trim();
-    updatedRecords.add(new AttendanceRecord(activeEmpNo, "", "", date, logIn, logOut));
-}
-     
     try {
         boolean success = attendanceService.updateAttendanceRecords(activeEmpNo, updatedRecords);
-        
+
         if (success) {
             JOptionPane.showMessageDialog(this, "Records saved and Overtime recalculated.");
-
-            // FIX: Refresh the entire table data from the source to ensure 
-            // the service sees the NEW saved values for calculation.
-            LocalDate startDate = startDateLabel.getDate() != null
-                    ? startDateLabel.getDate().toInstant().atZone(java.time.ZoneId.systemDefault()).toLocalDate()
-                    : LocalDate.now().minusMonths(1);
-            LocalDate endDate = endDateLabel.getDate() != null
-                    ? endDateLabel.getDate().toInstant().atZone(java.time.ZoneId.systemDefault()).toLocalDate()
-                    : LocalDate.now();
-
-            loadAttendanceRecords(activeEmpNo, startDate, endDate);
+            loadAttendanceRecords(activeEmpNo, getSelectedStartDateOrDefault(), getSelectedEndDateOrDefault());
+            applyTableEditMode(false);
         } else {
             JOptionPane.showMessageDialog(this, "No matching records were updated.", "Save Warning", JOptionPane.WARNING_MESSAGE);
         }
@@ -496,4 +453,6 @@ public class Attendance extends JFrame {
 
 
 }
+
+
 

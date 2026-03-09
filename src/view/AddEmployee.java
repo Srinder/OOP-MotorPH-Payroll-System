@@ -3,13 +3,12 @@ package view;
 import javax.swing.JOptionPane;
 import service.IEmployeeManagementService;
 import service.EmployeeManagementService;
-import java.awt.event.KeyAdapter;
-import java.awt.event.KeyEvent;
 
 
 public class AddEmployee extends javax.swing.JFrame {
     
     private final IEmployeeManagementService employeeService;
+    private static final String[] ACCESS_ROLES = {"ADMIN", "FINANCE", "IT", "HR", "EMPLOYEE"};
 
     public AddEmployee() {
         this(new EmployeeManagementService());
@@ -41,80 +40,54 @@ public class AddEmployee extends javax.swing.JFrame {
         if (!isHrUser()) {
             return;
         }
-        applyInputMask(jTxtPhoneNumber, new int[]{3, 3, 3}, "000-000-000");
-        applyInputMask(jTextSSS, new int[]{2, 7, 1}, "00-0000000-0");
-        applyInputMask(jTextPHILHEALTH, new int[]{3, 3, 3, 3}, "000-000-000-000");
-        applyInputMask(jTextTIN, new int[]{3, 3, 3, 3}, "000-000-000-000");
-        applyInputMask(jTextPAGIBIG, new int[]{3, 3, 3, 2}, "000-000-000-00");
+        employeeService.applyDigitGroupMask(jTxtPhoneNumber, new int[]{3, 3, 3}, "000-000-000");
+        employeeService.applyDigitGroupMask(jTextSSS, new int[]{2, 7, 1}, "00-0000000-0");
+        employeeService.applyDigitGroupMask(jTextPHILHEALTH, new int[]{3, 3, 3, 3}, "000-000-000-000");
+        employeeService.applyDigitGroupMask(jTextTIN, new int[]{3, 3, 3, 3}, "000-000-000-000");
+        employeeService.applyDigitGroupMask(jTextPAGIBIG, new int[]{3, 3, 3, 2}, "000-000-000-00");
     }
 
-    private void applyInputMask(javax.swing.text.JTextComponent field, int[] groups, String formatHint) {
-        final int maxDigits = totalDigits(groups);
-        field.setToolTipText("Format: " + formatHint);
-        field.addKeyListener(new KeyAdapter() {
-            @Override
-            public void keyTyped(KeyEvent e) {
-                char c = e.getKeyChar();
-                if (c == '\b' || c == 127) {
-                    return;
-                }
-                if (!Character.isDigit(c)) {
-                    e.consume();
-                    return;
-                }
-
-                String current = field.getText() == null ? "" : field.getText();
-                int currentDigits = countDigits(current);
-                String selected = field.getSelectedText();
-                int selectedDigits = selected == null ? 0 : countDigits(selected);
-                if (currentDigits - selectedDigits >= maxDigits) {
-                    e.consume();
-                }
-            }
-
-            @Override
-            public void keyReleased(KeyEvent e) {
-                String text = field.getText() == null ? "" : field.getText();
-                String digits = text.replaceAll("\\D", "");
-                if (digits.length() > maxDigits) {
-                    digits = digits.substring(0, maxDigits);
-                }
-                String formatted = formatByGroups(digits, groups);
-                if (!formatted.equals(text)) {
-                    field.setText(formatted);
-                }
-            }
-        });
+    private int getEmployeeNumberInput() {
+        return Integer.parseInt(jTxtEmpNum.getText().trim());
     }
 
-    private int totalDigits(int[] groups) {
-        int total = 0;
-        for (int group : groups) {
-            total += group;
+    private String promptForAccessLevel() {
+        return (String) JOptionPane.showInputDialog(
+                this,
+                "Select Access Level for this Employee:",
+                "Access Assignment",
+                JOptionPane.QUESTION_MESSAGE,
+                null,
+                ACCESS_ROLES,
+                ACCESS_ROLES[0]
+        );
+    }
+
+    private String promptForSecurityAnswer() {
+        return JOptionPane.showInputDialog(
+                this,
+                "Answer to: " + employeeService.getDefaultSecurityQuestion(),
+                "Security Question",
+                JOptionPane.QUESTION_MESSAGE
+        );
+    }
+
+    private void showGeneratedLogin(String firstName, String lastName, String username, String password) {
+        JOptionPane.showMessageDialog(this,
+                "Login for Employee " + firstName + " " + lastName + " has been created.\n" +
+                        "Username: " + username + "\nPassword: " + password,
+                "Login Created",
+                JOptionPane.INFORMATION_MESSAGE);
+    }
+
+    private void closeAndRefreshEmployeeTable() {
+        if (EmployeeTable.getInstance() != null) {
+            EmployeeTable.getInstance().refreshEmployeeTable();
+            dispose();
+        } else {
+            dispose();
+            new EmployeeTable().setVisible(true);
         }
-        return total;
-    }
-
-    private int countDigits(String value) {
-        return value == null ? 0 : value.replaceAll("\\D", "").length();
-    }
-
-    private String formatByGroups(String digits, int[] groups) {
-        StringBuilder sb = new StringBuilder();
-        int idx = 0;
-        for (int i = 0; i < groups.length; i++) {
-            int len = groups[i];
-            if (idx >= digits.length()) {
-                break;
-            }
-            int end = Math.min(idx + len, digits.length());
-            sb.append(digits, idx, end);
-            idx = end;
-            if (idx < digits.length() && i < groups.length - 1) {
-                sb.append("-");
-            }
-        }
-        return sb.toString();
     }
 
 
@@ -321,7 +294,7 @@ public class AddEmployee extends javax.swing.JFrame {
 
     private void jButtonSubmitActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButtonSubmitActionPerformed
         try {
-            int empNum = Integer.parseInt(jTxtEmpNum.getText().trim());
+            int empNum = getEmployeeNumberInput();
             String lastName = jTxtLastName.getText().trim();
             String firstName = jTxtFirstName.getText().trim();
             String phoneNumber = jTxtPhoneNumber.getText().trim();
@@ -333,16 +306,7 @@ public class AddEmployee extends javax.swing.JFrame {
             String philHealthNumber = jTextPHILHEALTH.getText().trim();
             String tinNumber = jTextTIN.getText().trim();
 
-            String[] roles = {"ADMIN", "FINANCE", "IT", "HR", "EMPLOYEE"};
-            String accessLevel = (String) JOptionPane.showInputDialog(
-                this,
-                "Select Access Level for this Employee:",
-                "Access Assignment",
-                JOptionPane.QUESTION_MESSAGE,
-                null,
-                roles,
-                roles[0]
-            );
+            String accessLevel = promptForAccessLevel();
 
             if (accessLevel == null || accessLevel.trim().isEmpty()) {
                 JOptionPane.showMessageDialog(this, "Access level is required.", "Validation Error", JOptionPane.ERROR_MESSAGE);
@@ -351,18 +315,9 @@ public class AddEmployee extends javax.swing.JFrame {
 
             String username = employeeService.generateDefaultUsername(firstName, lastName, empNum);
             String password = employeeService.getDefaultPassword();
+            showGeneratedLogin(firstName, lastName, username, password);
 
-            JOptionPane.showMessageDialog(this,
-                "Login for Employee " + firstName + " " + lastName + " has been created.\n" +
-                "Username: " + username + "\nPassword: " + password,
-                "Login Created", JOptionPane.INFORMATION_MESSAGE);
-
-            String answer = JOptionPane.showInputDialog(
-                this,
-                "Answer to: " + employeeService.getDefaultSecurityQuestion(),
-                "Security Question",
-                JOptionPane.QUESTION_MESSAGE
-            );
+            String answer = promptForSecurityAnswer();
 
             if (answer == null || answer.trim().isEmpty()) {
                 JOptionPane.showMessageDialog(this, "Security answer is required.", "Validation Error", JOptionPane.ERROR_MESSAGE);
@@ -390,13 +345,7 @@ public class AddEmployee extends javax.swing.JFrame {
 
             JOptionPane.showMessageDialog(this, "Employee added successfully!", "Success", JOptionPane.INFORMATION_MESSAGE);
             generateNextEmpNum();
-            if (EmployeeTable.getInstance() != null) {
-                EmployeeTable.getInstance().refreshEmployeeTable();
-                dispose();
-            } else {
-                dispose();
-                new EmployeeTable().setVisible(true);
-            }
+            closeAndRefreshEmployeeTable();
 
     } catch (NumberFormatException e) {
 

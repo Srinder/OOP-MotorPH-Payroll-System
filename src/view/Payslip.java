@@ -36,19 +36,12 @@ public class Payslip extends javax.swing.JFrame {
         this.salaryService = salaryService;
         this.employeeService = employeeService;
         initComponents();
-        WindowNavigation.installReturnToMainMenuOnClose(this);
+        util.WindowNavigation.installReturnToMainMenuOnClose(this);
         configureHeaderImage();
         setAttendanceAdjustmentVisibility(false, false, false, false);
         hourlyRate.setVisible(false);
         hourlyRateValue.setVisible(false);
-        
-        Integer employeeId = parseEmployeeId(this.empNo);
-        if (employeeId != null) {
-            Employee emp = employeeService.getEmployeeById(employeeId).orElse(null);
-            if (emp != null) {
-                employeeNameLabel.setText(emp.getLastName() + ", " + emp.getFirstName());
-            }
-        }
+        updateEmployeeNameLabel();
         
         loadCutoffDateOptions();
         this.setLocationRelativeTo(null);
@@ -544,68 +537,21 @@ public class Payslip extends javax.swing.JFrame {
     private void downloadPayslipActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_downloadPayslipActionPerformed
         String selectedCutoff = (String) cutoffDateCombo.getSelectedItem();
         LocalDate cutoffDateForName = cutoffDateOptions.get(selectedCutoff);
-        String exportDateForName = (cutoffDateForName != null)
-                ? cutoffDateForName.format(DateTimeFormatter.ofPattern("MM-dd-yyyy"))
-                : "payslipdate";
-
-        JFileChooser chooser = new JFileChooser();
-        chooser.setDialogTitle("Save Payslip PDF");
-        chooser.setSelectedFile(new File(exportDateForName + "_" + empNo + ".pdf"));
-        int result = chooser.showSaveDialog(this);
-        if (result != JFileChooser.APPROVE_OPTION) {
+        String outputPath = promptExportPath(cutoffDateForName);
+        if (outputPath == null) {
             return;
         }
 
-        File selectedFile = chooser.getSelectedFile();
-        String outputPath = selectedFile.getAbsolutePath().toLowerCase().endsWith(".pdf")
-                ? selectedFile.getAbsolutePath()
-                : selectedFile.getAbsolutePath() + ".pdf";
-
-        JLabel exportPayslipText = new JLabel();
-        String originalCutoffLabel = cutOff.getText();
-        boolean originalComboVisible = cutoffDateCombo.isVisible();
-        boolean originalViewVisible = viewPayslip.isVisible();
-        boolean originalDownloadVisible = downloadPayslip.isVisible();
-        boolean originalExitVisible = exitPayslip.isVisible();
-        java.awt.Color originalBackground = getContentPane().getBackground();
-        boolean exportTextAdded = false;
-
         try {
-            LocalDate cutoffDate = cutoffDateOptions.get(selectedCutoff);
-            String exportCutoffText = (cutoffDate != null)
-                    ? cutoffDate.format(DateTimeFormatter.ofPattern("MM/dd/yyyy"))
+            String exportCutoffText = (cutoffDateForName != null)
+                    ? cutoffDateForName.format(DateTimeFormatter.ofPattern("MM/dd/yyyy"))
                     : selectedCutoff;
-            if (exportCutoffText == null || exportCutoffText.trim().isEmpty() || exportCutoffText.equals("Select cutoff date")) {
+            if (!isValidExportCutoff(exportCutoffText)) {
                 JOptionPane.showMessageDialog(this, "Please select a valid payslip cutoff date first.");
                 return;
             }
-            cutOff.setText(originalCutoffLabel);
 
-            cutoffDateCombo.setVisible(false);
-            viewPayslip.setVisible(false);
-            downloadPayslip.setVisible(false);
-            exitPayslip.setVisible(false);
-            getContentPane().setBackground(java.awt.Color.WHITE);
-
-            exportPayslipText.setText(exportCutoffText);
-            exportPayslipText.setFont(cutoffDateCombo.getFont());
-            getContentPane().add(exportPayslipText);
-            exportTextAdded = true;
-
-            java.awt.Rectangle comboBounds = cutoffDateCombo.getBounds();
-            exportPayslipText.setBounds(comboBounds.x, comboBounds.y, comboBounds.width, comboBounds.height);
-
-            getContentPane().revalidate();
-            getContentPane().repaint();
-
-            BufferedImage image = new BufferedImage(
-                    getContentPane().getWidth(),
-                    getContentPane().getHeight(),
-                    BufferedImage.TYPE_INT_RGB);
-            java.awt.Graphics2D g2 = image.createGraphics();
-            getContentPane().paint(g2);
-            g2.dispose();
-
+            BufferedImage image = capturePayslipImageForExport(exportCutoffText);
             boolean exported = salaryService.exportPayslipPdf(image, outputPath);
             if (exported) {
                 JOptionPane.showMessageDialog(this, "Payslip saved to:\n" + outputPath);
@@ -614,46 +560,24 @@ public class Payslip extends javax.swing.JFrame {
             }
         } catch (Exception ex) {
             JOptionPane.showMessageDialog(this, "Failed to export payslip PDF:\n" + ex.getMessage(), "Export Error", JOptionPane.ERROR_MESSAGE);
-        } finally {
-            if (exportTextAdded) {
-                getContentPane().remove(exportPayslipText);
-            }
-            cutOff.setText(originalCutoffLabel);
-            cutoffDateCombo.setVisible(originalComboVisible);
-            viewPayslip.setVisible(originalViewVisible);
-            downloadPayslip.setVisible(originalDownloadVisible);
-            exitPayslip.setVisible(originalExitVisible);
-            getContentPane().setBackground(originalBackground);
-            getContentPane().revalidate();
-            getContentPane().repaint();
         }
     }//GEN-LAST:event_downloadPayslipActionPerformed
 
     private void viewPayslipActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_viewPayslipActionPerformed
-    String selectedCutoff = (String) cutoffDateCombo.getSelectedItem();
-    LocalDate cutoffDate = cutoffDateOptions.get(selectedCutoff);
-
+    LocalDate cutoffDate = getSelectedCutoffDate();
     if (cutoffDate == null) {
         JOptionPane.showMessageDialog(this, "Please select a cutoff date from the list.");
+        return;
+    }
+
+    Employee emp = resolveCurrentEmployee();
+    if (emp == null) {
         return;
     }
 
     LocalDate[] cutoffPeriod = salaryService.getCutoffPeriod(cutoffDate);
     LocalDate startDate = cutoffPeriod[0];
     LocalDate endDate = cutoffPeriod[1];
-
-    Integer employeeId = parseEmployeeId(this.empNo);
-    if (employeeId == null) {
-        JOptionPane.showMessageDialog(this, "Invalid employee ID.");
-        return;
-    }
-
-    Employee emp = employeeService.getEmployeeById(employeeId).orElse(null);
-
-    if (emp == null) {
-        JOptionPane.showMessageDialog(this, "Employee not found!");
-        return;
-    }
 
     payDateLabel.setText(buildCutoffPeriodLabel(cutoffDate));
 
@@ -688,6 +612,104 @@ public class Payslip extends javax.swing.JFrame {
         }
 
         cutoffDateCombo.setModel(model);
+    }
+
+    private void updateEmployeeNameLabel() {
+        Employee emp = employeeService.getEmployeeByRawId(this.empNo).orElse(null);
+        if (emp != null) {
+            employeeNameLabel.setText(emp.getLastName() + ", " + emp.getFirstName());
+        }
+    }
+
+    private LocalDate getSelectedCutoffDate() {
+        String selectedCutoff = (String) cutoffDateCombo.getSelectedItem();
+        return cutoffDateOptions.get(selectedCutoff);
+    }
+
+    private Employee resolveCurrentEmployee() {
+        Employee emp = employeeService.getEmployeeByRawId(this.empNo).orElse(null);
+        if (emp == null) {
+            JOptionPane.showMessageDialog(this, "Invalid or unknown employee ID.");
+            return null;
+        }
+        return emp;
+    }
+
+    private String promptExportPath(LocalDate cutoffDateForName) {
+        String exportDateForName = (cutoffDateForName != null)
+                ? cutoffDateForName.format(DateTimeFormatter.ofPattern("MM-dd-yyyy"))
+                : "payslipdate";
+
+        JFileChooser chooser = new JFileChooser();
+        chooser.setDialogTitle("Save Payslip PDF");
+        chooser.setSelectedFile(new File(exportDateForName + "_" + empNo + ".pdf"));
+        int result = chooser.showSaveDialog(this);
+        if (result != JFileChooser.APPROVE_OPTION) {
+            return null;
+        }
+
+        File selectedFile = chooser.getSelectedFile();
+        return selectedFile.getAbsolutePath().toLowerCase().endsWith(".pdf")
+                ? selectedFile.getAbsolutePath()
+                : selectedFile.getAbsolutePath() + ".pdf";
+    }
+
+    private boolean isValidExportCutoff(String exportCutoffText) {
+        return exportCutoffText != null
+                && !exportCutoffText.trim().isEmpty()
+                && !"Select cutoff date".equals(exportCutoffText);
+    }
+
+    private BufferedImage capturePayslipImageForExport(String exportCutoffText) {
+        JLabel exportPayslipText = new JLabel();
+        String originalCutoffLabel = cutOff.getText();
+        boolean originalComboVisible = cutoffDateCombo.isVisible();
+        boolean originalViewVisible = viewPayslip.isVisible();
+        boolean originalDownloadVisible = downloadPayslip.isVisible();
+        boolean originalExitVisible = exitPayslip.isVisible();
+        java.awt.Color originalBackground = getContentPane().getBackground();
+        boolean exportTextAdded = false;
+
+        try {
+            cutOff.setText(originalCutoffLabel);
+            cutoffDateCombo.setVisible(false);
+            viewPayslip.setVisible(false);
+            downloadPayslip.setVisible(false);
+            exitPayslip.setVisible(false);
+            getContentPane().setBackground(java.awt.Color.WHITE);
+
+            exportPayslipText.setText(exportCutoffText);
+            exportPayslipText.setFont(cutoffDateCombo.getFont());
+            getContentPane().add(exportPayslipText);
+            exportTextAdded = true;
+
+            java.awt.Rectangle comboBounds = cutoffDateCombo.getBounds();
+            exportPayslipText.setBounds(comboBounds.x, comboBounds.y, comboBounds.width, comboBounds.height);
+
+            getContentPane().revalidate();
+            getContentPane().repaint();
+
+            BufferedImage image = new BufferedImage(
+                    getContentPane().getWidth(),
+                    getContentPane().getHeight(),
+                    BufferedImage.TYPE_INT_RGB);
+            java.awt.Graphics2D g2 = image.createGraphics();
+            getContentPane().paint(g2);
+            g2.dispose();
+            return image;
+        } finally {
+            if (exportTextAdded) {
+                getContentPane().remove(exportPayslipText);
+            }
+            cutOff.setText(originalCutoffLabel);
+            cutoffDateCombo.setVisible(originalComboVisible);
+            viewPayslip.setVisible(originalViewVisible);
+            downloadPayslip.setVisible(originalDownloadVisible);
+            exitPayslip.setVisible(originalExitVisible);
+            getContentPane().setBackground(originalBackground);
+            getContentPane().revalidate();
+            getContentPane().repaint();
+        }
     }
 
     private void exitPayslipActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_exitPayslipActionPerformed
@@ -790,17 +812,6 @@ public class Payslip extends javax.swing.JFrame {
         undertimeValue.setVisible(hasUndertime);
         hourlyRate.setVisible(hasAbsent);
         hourlyRateValue.setVisible(hasAbsent);
-    }
-
-    private Integer parseEmployeeId(String rawEmpNo) {
-        if (rawEmpNo == null || rawEmpNo.trim().isEmpty()) {
-            return null;
-        }
-        try {
-            return Integer.parseInt(rawEmpNo.trim());
-        } catch (NumberFormatException ex) {
-            return null;
-        }
     }
 
     private String buildCutoffPeriodLabel(LocalDate cutoffDate) {

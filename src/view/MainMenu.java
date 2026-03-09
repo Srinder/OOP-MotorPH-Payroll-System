@@ -72,6 +72,56 @@ public class MainMenu extends javax.swing.JFrame {
         }
     }
 
+    private int showAccessModeDialog(String title) {
+        Object[] options = {"View My Own", "View Other Employee"};
+        return JOptionPane.showOptionDialog(
+                this,
+                "Select Access Mode",
+                title,
+                JOptionPane.YES_NO_OPTION,
+                JOptionPane.QUESTION_MESSAGE,
+                null,
+                options,
+                options[0]);
+    }
+
+    private void openSelfEmployeeProfile() {
+        EditEmpInfo editInfo = new EditEmpInfo(currentUser.getEmployeeNumber(), true);
+        editInfo.setVisible(true);
+        editInfo.setLocationRelativeTo(null);
+    }
+
+    private void openEmployeeTable(boolean openedFromPayslip) {
+        EmployeeTable table = new EmployeeTable(openedFromPayslip);
+        table.setVisible(true);
+        table.setLocationRelativeTo(null);
+    }
+
+    private void openAttendanceSelf(String currentEmpId) {
+        Attendance attendanceView = new Attendance(currentEmpId, true);
+        attendanceView.setVisible(true);
+        this.setVisible(false);
+    }
+
+    private void openLeaveSelf(int empId) {
+        LeaveRequests leaveWindow = new LeaveRequests(empId);
+        leaveWindow.setVisible(true);
+        this.setVisible(false);
+    }
+
+    private void openExternalLink(String url, String failureLabel) {
+        try {
+            URI targetUrl = new URI(url);
+            if (Desktop.isDesktopSupported() && Desktop.getDesktop().isSupported(Desktop.Action.BROWSE)) {
+                Desktop.getDesktop().browse(targetUrl);
+            } else {
+                JOptionPane.showMessageDialog(this, "Opening a browser is not supported on this device.");
+            }
+        } catch (Exception ex) {
+            JOptionPane.showMessageDialog(this, "Unable to open " + failureLabel + " URL: " + ex.getMessage());
+        }
+    }
+
     // In EditEmpInfo.java
 
     /**
@@ -333,37 +383,15 @@ public class MainMenu extends javax.swing.JFrame {
     }//GEN-LAST:event_jButtonTimeinActionPerformed
 
     private void jButtonEmployeeActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButtonEmployeeActionPerformed
-                                    
-    // 1. Define who gets the "Master View"
-    boolean hasMasterAccess = currentUser.canViewMasterEmployeeInfo();
-
-    if (hasMasterAccess) {
-        Object[] options = {"View My Own", "View Other Employee"};
-        int choice = JOptionPane.showOptionDialog(
-                this,
-                "Select Access Mode",
-                "Employee Information",
-                JOptionPane.YES_NO_OPTION,
-                JOptionPane.QUESTION_MESSAGE,
-                null,
-                options,
-                options[0]);
-
+    if (currentUser.canViewMasterEmployeeInfo()) {
+        int choice = showAccessModeDialog("Employee Information");
         if (choice == JOptionPane.YES_OPTION) {
-            EditEmpInfo editInfo = new EditEmpInfo(currentUser.getEmployeeNumber(), true);
-            editInfo.setVisible(true);
-            editInfo.setLocationRelativeTo(null);
+            openSelfEmployeeProfile();
         } else if (choice == JOptionPane.NO_OPTION) {
-            EmployeeTable fullEmployeeTable = new EmployeeTable(false);
-            fullEmployeeTable.setVisible(true);
-            fullEmployeeTable.setLocationRelativeTo(null);
+            openEmployeeTable(false);
         }
     } else {
-        // IT, Regular, and Probationary users see ONLY their own record
-        // This opens the edit screen in "Read-Only" or "Self-Service" mode
-        EditEmpInfo editInfo = new EditEmpInfo(currentUser.getEmployeeNumber(), true);
-        editInfo.setVisible(true);
-        editInfo.setLocationRelativeTo(null);
+        openSelfEmployeeProfile();
     }
     }//GEN-LAST:event_jButtonEmployeeActionPerformed
 
@@ -388,25 +416,13 @@ public class MainMenu extends javax.swing.JFrame {
         }
 
         String currentEmpId = String.valueOf(currentUser.getEmployeeNumber());
-        String role = currentUser.getRole() == null ? "" : currentUser.getRole().trim().toUpperCase();
-        boolean canSelectOtherEmployeeForAttendance = "ADMIN".equals(role) || "FINANCE".equals(role);
+        boolean canSelectOtherEmployeeForAttendance = currentUser.canSelectOtherEmployeeAttendance();
 
         if (canSelectOtherEmployeeForAttendance) {
-            Object[] options = {"View My Own", "View Other Employee"};
-            int choice = JOptionPane.showOptionDialog(
-                    this,
-                    "Select Access Mode",
-                    "Attendance",
-                    JOptionPane.YES_NO_OPTION,
-                    JOptionPane.QUESTION_MESSAGE,
-                    null,
-                    options,
-                    options[0]);
+            int choice = showAccessModeDialog("Attendance");
 
             if (choice == JOptionPane.YES_OPTION) {
-                Attendance attendanceView = new Attendance(currentEmpId, true);
-                attendanceView.setVisible(true);
-                this.setVisible(false);
+                openAttendanceSelf(currentEmpId);
             } else if (choice == JOptionPane.NO_OPTION) {
                 EmployeeTable attendanceEmployeeView = EmployeeTable.forAttendanceSelection();
                 attendanceEmployeeView.setVisible(true);
@@ -414,29 +430,22 @@ public class MainMenu extends javax.swing.JFrame {
                 this.setVisible(false);
             }
         } else {
-            Attendance attendanceView = new Attendance(currentEmpId, true);
-            attendanceView.setVisible(true);
-            this.setVisible(false);
+            openAttendanceSelf(currentEmpId);
         }
         
     }//GEN-LAST:event_jButtonAttendanceActionPerformed
 
     private void jButtonPayslipActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButtonPayslipActionPerformed
         String currentEmpId = String.valueOf(currentUser.getEmployeeNumber());
-        String role = currentUser.getRole() == null ? "" : currentUser.getRole().trim().toUpperCase();
-        boolean canSelectOtherEmployeeForPayslip = "ADMIN".equals(role) || "FINANCE".equals(role);
+        boolean canSelectOtherEmployeeForPayslip = currentUser.canViewOtherEmployeePayslip();
         
         if (canSelectOtherEmployeeForPayslip) {
-            Object[] options = {"View My Own", "View Other Employee"};
-            int choice = JOptionPane.showOptionDialog(this, "Select Access Mode", "Payroll",
-                    JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE, null, options, options[0]);
+            int choice = showAccessModeDialog("Payroll");
 
             if (choice == JOptionPane.YES_OPTION) {
                 new Payslip(currentEmpId).setVisible(true);
             } else if (choice == JOptionPane.NO_OPTION) {
-                EmployeeTable payslipEmployeeView = new EmployeeTable(true);
-                payslipEmployeeView.setVisible(true);
-                payslipEmployeeView.setLocationRelativeTo(null);
+                openEmployeeTable(true);
             }
         } else {
             new Payslip(currentEmpId).setVisible(true);
@@ -444,29 +453,11 @@ public class MainMenu extends javax.swing.JFrame {
     }//GEN-LAST:event_jButtonPayslipActionPerformed
 
     private void jButtonReportsActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButtonReportsActionPerformed
-        try {
-            URI reportsUrl = new URI("https://source-flame-64500831.figma.site");
-            if (Desktop.isDesktopSupported() && Desktop.getDesktop().isSupported(Desktop.Action.BROWSE)) {
-                Desktop.getDesktop().browse(reportsUrl);
-            } else {
-                JOptionPane.showMessageDialog(this, "Opening a browser is not supported on this device.");
-            }
-        } catch (Exception ex) {
-            JOptionPane.showMessageDialog(this, "Unable to open reports URL: " + ex.getMessage());
-        }
+        openExternalLink("https://source-flame-64500831.figma.site", "reports");
     }//GEN-LAST:event_jButtonReportsActionPerformed
 
     private void jButtonUserManagementActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButtonUserManagementActionPerformed
-        try {
-            URI manageSystemUrl = new URI("https://narrow-drums-28341315.figma.site");
-            if (Desktop.isDesktopSupported() && Desktop.getDesktop().isSupported(Desktop.Action.BROWSE)) {
-                Desktop.getDesktop().browse(manageSystemUrl);
-            } else {
-                JOptionPane.showMessageDialog(this, "Opening a browser is not supported on this device.");
-            }
-        } catch (Exception ex) {
-            JOptionPane.showMessageDialog(this, "Unable to open Manage System URL: " + ex.getMessage());
-        }
+        openExternalLink("https://narrow-drums-28341315.figma.site", "Manage System");
     }//GEN-LAST:event_jButtonUserManagementActionPerformed
 
     private void jButtonTimeOutActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButtonTimeOutActionPerformed
@@ -479,26 +470,13 @@ public class MainMenu extends javax.swing.JFrame {
             return;
         }
 
-        String role = currentUser.getRole() == null ? "" : currentUser.getRole().trim().toUpperCase();
         int empId = this.currentUser.getEmployeeNumber();
 
-        // Prompt only for Admin and HR.
-        if ("ADMIN".equals(role) || "HR".equals(role)) {
-            Object[] options = {"View My Own", "View Other Employee"};
-            int choice = JOptionPane.showOptionDialog(
-                    this,
-                    "Select Access Mode",
-                    "Leave Application",
-                    JOptionPane.YES_NO_OPTION,
-                    JOptionPane.QUESTION_MESSAGE,
-                    null,
-                    options,
-                    options[0]);
+        if (currentUser.canSelectOtherEmployeeLeave()) {
+            int choice = showAccessModeDialog("Leave Application");
 
             if (choice == JOptionPane.YES_OPTION) {
-                view.LeaveRequests leaveWindow = new view.LeaveRequests(empId);
-                leaveWindow.setVisible(true);
-                this.setVisible(false);
+                openLeaveSelf(empId);
             } else if (choice == JOptionPane.NO_OPTION) {
                 EmployeeTable leaveEmployeeView = EmployeeTable.forLeaveSelection();
                 leaveEmployeeView.setVisible(true);
@@ -508,9 +486,7 @@ public class MainMenu extends javax.swing.JFrame {
             return;
         }
 
-        view.LeaveRequests leaveWindow = new view.LeaveRequests(empId);
-        leaveWindow.setVisible(true);
-        this.setVisible(false);
+        openLeaveSelf(empId);
     }//GEN-LAST:event_btnLeaveRequestActionPerformed
 
     /**

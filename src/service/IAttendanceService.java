@@ -27,5 +27,7 @@ public interface IAttendanceService {
     String getEmployeeDisplayName(String empNo);
     List<Employee> searchEmployees(String query);
     List<AttendanceRecord> getAttendanceRecords(String targetEmpNo, LocalDate startDate, LocalDate endDate);
+    List<Object[]> buildAttendanceTableRows(String targetEmpNo, LocalDate startDate, LocalDate endDate);
+    List<AttendanceRecord> mapRowsToAttendanceRecords(String targetEmpNo, List<Object[]> rows);
     boolean updateAttendanceRecords(String targetEmpNo, List<AttendanceRecord> updatedRecords);
 }

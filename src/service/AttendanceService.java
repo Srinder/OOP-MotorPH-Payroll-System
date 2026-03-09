@@ -272,6 +272,55 @@ public class AttendanceService implements IAttendanceService{
     }
 
     @Override
+    public List<Object[]> buildAttendanceTableRows(String targetEmpNo, LocalDate startDate, LocalDate endDate) {
+        List<Object[]> rows = new ArrayList<>();
+        List<AttendanceRecord> records = getAttendanceRecords(targetEmpNo, startDate, endDate);
+        int targetEmpId;
+        try {
+            targetEmpId = Integer.parseInt(targetEmpNo.trim());
+        } catch (Exception ex) {
+            targetEmpId = -1;
+        }
+
+        for (AttendanceRecord record : records) {
+            Map<String, Double> metrics = targetEmpId > 0
+                    ? computeDailyAttendanceMinutes(targetEmpId, record.getDate())
+                    : Map.of("Late", 0.0, "Overtime", 0.0, "Undertime", 0.0);
+            rows.add(new Object[]{
+                    record.getDate(),
+                    record.getLogIn(),
+                    record.getLogOut(),
+                    metrics.get("Late"),
+                    metrics.get("Overtime"),
+                    metrics.get("Undertime")
+            });
+        }
+        return rows;
+    }
+
+    @Override
+    public List<AttendanceRecord> mapRowsToAttendanceRecords(String targetEmpNo, List<Object[]> rows) {
+        List<AttendanceRecord> mapped = new ArrayList<>();
+        if (targetEmpNo == null || rows == null) {
+            return mapped;
+        }
+        String empNo = targetEmpNo.trim();
+        for (Object[] row : rows) {
+            if (row == null || row.length < 3) {
+                continue;
+            }
+            String date = row[0] == null ? "" : String.valueOf(row[0]).trim();
+            if (date.isEmpty()) {
+                continue;
+            }
+            String logIn = row[1] == null ? "" : String.valueOf(row[1]).trim();
+            String logOut = row[2] == null ? "" : String.valueOf(row[2]).trim();
+            mapped.add(new AttendanceRecord(empNo, "", "", date, logIn, logOut));
+        }
+        return mapped;
+    }
+
+    @Override
     public boolean updateAttendanceRecords(String targetEmpNo, List<AttendanceRecord> updatedRecords) {
         if (targetEmpNo == null || updatedRecords == null || updatedRecords.isEmpty()) {
             return false;

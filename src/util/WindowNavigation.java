@@ -1,4 +1,6 @@
-package view;
+package util;
+
+import view.MainMenu;
 
 public final class WindowNavigation {
     private static final String SKIP_RETURN_ON_CLOSE = "skipReturnToMainMenuOnClose";

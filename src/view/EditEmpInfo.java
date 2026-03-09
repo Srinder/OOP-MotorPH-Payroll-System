@@ -4,8 +4,6 @@ import model.Employee;
 import javax.swing.JOptionPane;
 import java.util.Optional;
 import javax.swing.JTextField;
-import java.awt.event.KeyAdapter;
-import java.awt.event.KeyEvent; 
 import service.IEmployeeManagementService;
 import service.EmployeeManagementService;
 
@@ -27,7 +25,7 @@ public class EditEmpInfo extends javax.swing.JFrame {
     this.openedFromEmployeeTable = openedFromEmployeeTable;
     initComponents();
     configureHrInputMasks();
-    WindowNavigation.installReturnToMainMenuOnClose(this);
+    util.WindowNavigation.installReturnToMainMenuOnClose(this);
     configureCloseTarget();
     loadEmployeeData(employeeNumber); // Your method to fill text fields
 
@@ -53,7 +51,7 @@ private void configureCloseTarget() {
         return;
     }
 
-    WindowNavigation.suppressReturnToMainMenuOnClose(this);
+    util.WindowNavigation.suppressReturnToMainMenuOnClose(this);
     this.addWindowListener(new java.awt.event.WindowAdapter() {
         @Override
         public void windowClosed(java.awt.event.WindowEvent e) {
@@ -75,80 +73,11 @@ private void configureHrInputMasks() {
     if (!isHrUser()) {
         return;
     }
-    applyInputMask(PhoneNum, new int[]{3, 3, 3}, "000-000-000");
-    applyInputMask(SSS, new int[]{2, 7, 1}, "00-0000000-0");
-    applyInputMask(PHILHEALTH, new int[]{3, 3, 3, 3}, "000-000-000-000");
-    applyInputMask(TIN, new int[]{3, 3, 3, 3}, "000-000-000-000");
-    applyInputMask(PAGIBIG, new int[]{3, 3, 3, 2}, "000-000-000-00");
-}
-
-private void applyInputMask(javax.swing.text.JTextComponent field, int[] groups, String formatHint) {
-    final int maxDigits = totalDigits(groups);
-    field.setToolTipText("Format: " + formatHint);
-    field.addKeyListener(new KeyAdapter() {
-        @Override
-        public void keyTyped(KeyEvent e) {
-            char c = e.getKeyChar();
-            if (c == '\b' || c == 127) {
-                return;
-            }
-            if (!Character.isDigit(c)) {
-                e.consume();
-                return;
-            }
-
-            String current = field.getText() == null ? "" : field.getText();
-            int currentDigits = countDigits(current);
-            String selected = field.getSelectedText();
-            int selectedDigits = selected == null ? 0 : countDigits(selected);
-            if (currentDigits - selectedDigits >= maxDigits) {
-                e.consume();
-            }
-        }
-
-        @Override
-        public void keyReleased(KeyEvent e) {
-            String text = field.getText() == null ? "" : field.getText();
-            String digits = text.replaceAll("\\D", "");
-            if (digits.length() > maxDigits) {
-                digits = digits.substring(0, maxDigits);
-            }
-            String formatted = formatByGroups(digits, groups);
-            if (!formatted.equals(text)) {
-                field.setText(formatted);
-            }
-        }
-    });
-}
-
-private int totalDigits(int[] groups) {
-    int total = 0;
-    for (int group : groups) {
-        total += group;
-    }
-    return total;
-}
-
-private int countDigits(String value) {
-    return value == null ? 0 : value.replaceAll("\\D", "").length();
-}
-
-private String formatByGroups(String digits, int[] groups) {
-    StringBuilder sb = new StringBuilder();
-    int idx = 0;
-    for (int i = 0; i < groups.length; i++) {
-        int len = groups[i];
-        if (idx >= digits.length()) {
-            break;
-        }
-        int end = Math.min(idx + len, digits.length());
-        sb.append(digits, idx, end);
-        idx = end;
-        if (idx < digits.length() && i < groups.length - 1) {
-            sb.append("-");
-        }
-    }
-    return sb.toString();
+    employeeService.applyDigitGroupMask(PhoneNum, new int[]{3, 3, 3}, "000-000-000");
+    employeeService.applyDigitGroupMask(SSS, new int[]{2, 7, 1}, "00-0000000-0");
+    employeeService.applyDigitGroupMask(PHILHEALTH, new int[]{3, 3, 3, 3}, "000-000-000-000");
+    employeeService.applyDigitGroupMask(TIN, new int[]{3, 3, 3, 3}, "000-000-000-000");
+    employeeService.applyDigitGroupMask(PAGIBIG, new int[]{3, 3, 3, 2}, "000-000-000-00");
 }
 
 
@@ -185,6 +114,41 @@ private void loadEmployeeData(int empNum) {
         JOptionPane.showMessageDialog(this, "Employee not found!");
         this.dispose();
     }
+}
+
+private boolean saveEmployeeChanges() {
+    return employeeService.updateEmployeeFromForm(
+            employeeData,
+            txtLname.getText().trim(),
+            PositionInfo.getText().trim(),
+            PhoneNum.getText().trim(),
+            Status.getText().trim(),
+            ImmSup.getText().trim(),
+            Address.getText().trim(),
+            Birthday.getText().trim(),
+            SSS.getText().trim(),
+            PHILHEALTH.getText().trim(),
+            TIN.getText().trim(),
+            PAGIBIG.getText().trim(),
+            Salary.getText().trim(),
+            Hourly.getText().trim(),
+            PhoneAll.getText().trim(),
+            ClothAll.getText().trim(),
+            Rice.getText().trim()
+    );
+}
+
+private void refreshEmployeeTableIfPresent() {
+    if (EmployeeTable.getInstance() != null) {
+        EmployeeTable.getInstance().refreshEmployeeTable();
+    }
+}
+
+private void finalizeSuccessfulSave() {
+    JOptionPane.showMessageDialog(this, "Employee record updated successfully!");
+    refreshEmployeeTableIfPresent();
+    setFieldsEditable(false);
+    dispose();
 }
 
 
@@ -558,37 +522,13 @@ private void loadEmployeeData(int empNum) {
     }
 
     try {
-        boolean updated = employeeService.updateEmployeeFromForm(
-                employeeData,
-                txtLname.getText().trim(),
-                PositionInfo.getText().trim(),
-                PhoneNum.getText().trim(),
-                Status.getText().trim(),
-                ImmSup.getText().trim(),
-                Address.getText().trim(),
-                Birthday.getText().trim(),
-                SSS.getText().trim(),
-                PHILHEALTH.getText().trim(),
-                TIN.getText().trim(),
-                PAGIBIG.getText().trim(),
-                Salary.getText().trim(),
-                Hourly.getText().trim(),
-                PhoneAll.getText().trim(),
-                ClothAll.getText().trim(),
-                Rice.getText().trim()
-        );
+        boolean updated = saveEmployeeChanges();
         if (!updated) {
             JOptionPane.showMessageDialog(this, "Failed to save employee changes.", "Save Failed", JOptionPane.ERROR_MESSAGE);
             return;
         }
 
-        JOptionPane.showMessageDialog(this, "Employee record updated successfully!");
-        if (EmployeeTable.getInstance() != null) {
-            EmployeeTable.getInstance().refreshEmployeeTable();
-        }
-
-        setFieldsEditable(false);
-        dispose();
+        finalizeSuccessfulSave();
     } catch (Exception e) {
         JOptionPane.showMessageDialog(this, "Error saving employee changes: " + e.getMessage(), "Data Error", JOptionPane.ERROR_MESSAGE);
     }

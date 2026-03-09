@@ -35,5 +35,6 @@ public interface ILeaveManagement {
     int getLeaveDaysInt(String start, String end);
     int getLeaveDaysInt(Date start, Date end);
     int[] getLeaveCreditsSummary(int empId);
+    List<LeaveRequest> mapRowsToLeaveRequests(List<Object[]> rows, boolean statusOnlyMode);
 }
 

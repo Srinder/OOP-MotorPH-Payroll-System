@@ -7,9 +7,12 @@ import repository.EmployeeRepository;
 import repository.UserRepository;
 import model.Employee;
 import model.RegularEmployee;
+import java.awt.event.KeyAdapter;
+import java.awt.event.KeyEvent;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
+import javax.swing.text.JTextComponent;
 
 public class EmployeeManagementService implements IEmployeeManagementService {
     
@@ -322,6 +325,91 @@ public class EmployeeManagementService implements IEmployeeManagementService {
                 emp.getPhoneNumber().contains(lowerSearchTerm)
             )
             .collect(Collectors.toList());
+    }
+
+    @Override
+    public void applyDigitGroupMask(JTextComponent field, int[] groups, String formatHint) {
+        if (field == null || groups == null || groups.length == 0) {
+            return;
+        }
+        final int maxDigits = totalDigits(groups);
+        field.setToolTipText("Format: " + formatHint);
+        field.addKeyListener(new KeyAdapter() {
+            @Override
+            public void keyTyped(KeyEvent e) {
+                char c = e.getKeyChar();
+                if (c == '\b' || c == 127) {
+                    return;
+                }
+                if (!Character.isDigit(c)) {
+                    e.consume();
+                    return;
+                }
+
+                String current = field.getText() == null ? "" : field.getText();
+                int currentDigits = countDigits(current);
+                String selected = field.getSelectedText();
+                int selectedDigits = selected == null ? 0 : countDigits(selected);
+                if (currentDigits - selectedDigits >= maxDigits) {
+                    e.consume();
+                }
+            }
+
+            @Override
+            public void keyReleased(KeyEvent e) {
+                String text = field.getText() == null ? "" : field.getText();
+                String digits = text.replaceAll("\\D", "");
+                if (digits.length() > maxDigits) {
+                    digits = digits.substring(0, maxDigits);
+                }
+                String formatted = formatByGroups(digits, groups);
+                if (!formatted.equals(text)) {
+                    field.setText(formatted);
+                }
+            }
+        });
+    }
+
+    @Override
+    public Optional<Employee> getEmployeeByRawId(String rawEmployeeId) {
+        if (rawEmployeeId == null || rawEmployeeId.trim().isEmpty()) {
+            return Optional.empty();
+        }
+        try {
+            return getEmployeeById(Integer.parseInt(rawEmployeeId.trim()));
+        } catch (NumberFormatException ex) {
+            return Optional.empty();
+        }
+    }
+
+    private int totalDigits(int[] groups) {
+        int total = 0;
+        for (int group : groups) {
+            total += group;
+        }
+        return total;
+    }
+
+    private int countDigits(String value) {
+        return value == null ? 0 : value.replaceAll("\\D", "").length();
+    }
+
+    private String formatByGroups(String digits, int[] groups) {
+        StringBuilder sb = new StringBuilder();
+        int idx = 0;
+        for (int i = 0; i < groups.length; i++) {
+            int len = groups[i];
+            if (idx >= digits.length()) {
+                break;
+            }
+            int end = Math.min(idx + len, digits.length());
+            sb.append(digits, idx, end);
+            idx = end;
+            if (idx < digits.length() && i < groups.length - 1) {
+                sb.append("-");
+            }
+        }
+        return sb.toString();
     }
     
 }

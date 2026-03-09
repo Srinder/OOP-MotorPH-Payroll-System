@@ -207,4 +207,54 @@ public class LeaveManagement implements ILeaveManagement {
         int total = vacation + sick + emergency;
         return new int[]{vacation, sick, emergency, total};
     }
+
+    @Override
+    public List<LeaveRequest> mapRowsToLeaveRequests(List<Object[]> rows, boolean statusOnlyMode) {
+        List<LeaveRequest> selectedRequests = new ArrayList<>();
+        if (rows == null || rows.isEmpty()) {
+            return selectedRequests;
+        }
+
+        for (Object[] row : rows) {
+            if (row == null) {
+                continue;
+            }
+            try {
+                int empId;
+                String leaveType;
+                String startDate;
+                String endDate;
+                String status;
+                String reason;
+
+                if (statusOnlyMode) {
+                    if (row.length < 8) {
+                        continue;
+                    }
+                    empId = Integer.parseInt(String.valueOf(row[1]).trim());
+                    leaveType = String.valueOf(row[2]);
+                    startDate = String.valueOf(row[3]);
+                    endDate = String.valueOf(row[4]);
+                    status = String.valueOf(row[6]);
+                    reason = String.valueOf(row[7]);
+                } else {
+                    if (row.length < 7) {
+                        continue;
+                    }
+                    empId = Integer.parseInt(String.valueOf(row[0]).trim());
+                    leaveType = String.valueOf(row[1]);
+                    startDate = String.valueOf(row[2]);
+                    endDate = String.valueOf(row[3]);
+                    status = String.valueOf(row[5]);
+                    reason = String.valueOf(row[6]);
+                }
+
+                selectedRequests.add(new LeaveRequest(empId, leaveType, startDate, endDate, reason, status));
+            } catch (Exception ignored) {
+                // Skip malformed rows.
+            }
+        }
+
+        return selectedRequests;
+    }
 }
