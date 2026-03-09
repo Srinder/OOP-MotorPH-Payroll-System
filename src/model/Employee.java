@@ -88,6 +88,9 @@ public abstract class Employee implements ICalculatable {
         return firstName + " " + lastName;
     }
 
+    /**
+ *
+ *
     public boolean canManageSystem() {
         return "IT".equalsIgnoreCase(getRole());
     }
@@ -136,6 +139,7 @@ public abstract class Employee implements ICalculatable {
         String role = getRole();
         return "FINANCE".equalsIgnoreCase(role) || "ADMIN".equalsIgnoreCase(role);
     }
+    */
     
     //Calculate Total Allowances
     public double getTotalAllowances(){

@@ -8,8 +8,10 @@ import java.awt.Desktop;
 import java.net.URI;
 import service.IAttendanceService;
 import service.AttendanceService;
+import service.AuthorizationService;
 import service.IEmployeeManagementService;
 import service.EmployeeManagementService;
+import service.IAuthorizationService;
 import service.ISalaryService;
 import service.SalaryService;
 
@@ -26,6 +28,7 @@ public class MainMenu extends javax.swing.JFrame {
     private final IAttendanceService attendanceService;
     private final IEmployeeManagementService employeeService;
     private final ISalaryService salaryService;
+    private final IAuthorizationService authzService = new AuthorizationService();
 
     //Default constructor (optional for testing or fallback)
     public MainMenu() {
@@ -65,9 +68,9 @@ public class MainMenu extends javax.swing.JFrame {
     
     private void applyRolePermissions() {
         if (currentUser == null) return;
-        jButtonUserManagement.setVisible(currentUser.canManageSystem());
-        jButtonReports.setVisible(currentUser.canViewReports());
-        if (currentUser.shouldUseMyProfileLabel()) {
+        jButtonUserManagement.setVisible(authzService.canManageSystem(currentUser));
+        jButtonReports.setVisible(authzService.canViewReports(currentUser));
+        if (authzService.shouldUseMyProfileLabel(currentUser)) {
             jButtonEmployee.setText("My Profile");
         }
     }
@@ -384,7 +387,7 @@ public class MainMenu extends javax.swing.JFrame {
     }//GEN-LAST:event_jButtonTimeinActionPerformed
 
     private void jButtonEmployeeActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButtonEmployeeActionPerformed
-    if (currentUser.canViewMasterEmployeeInfo()) {
+    if (authzService.canViewMasterEmployeeInfo(currentUser)) {
         int choice = showAccessModeDialog("Employee Information");
         if (choice == JOptionPane.YES_OPTION) {
             openSelfEmployeeProfile();
@@ -417,7 +420,7 @@ public class MainMenu extends javax.swing.JFrame {
         }
 
         String currentEmpId = String.valueOf(currentUser.getEmployeeNumber());
-        boolean canSelectOtherEmployeeForAttendance = currentUser.canSelectOtherEmployeeAttendance();
+        boolean canSelectOtherEmployeeForAttendance = authzService.canSelectOtherEmployeeAttendance(currentUser);
 
         if (canSelectOtherEmployeeForAttendance) {
             int choice = showAccessModeDialog("Attendance");
@@ -438,7 +441,7 @@ public class MainMenu extends javax.swing.JFrame {
 
     private void jButtonPayslipActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButtonPayslipActionPerformed
         String currentEmpId = String.valueOf(currentUser.getEmployeeNumber());
-        boolean canSelectOtherEmployeeForPayslip = currentUser.canViewOtherEmployeePayslip();
+        boolean canSelectOtherEmployeeForPayslip = authzService.canViewOtherEmployeePayslip(currentUser);
         
         if (canSelectOtherEmployeeForPayslip) {
             int choice = showAccessModeDialog("Payroll");
@@ -473,7 +476,7 @@ public class MainMenu extends javax.swing.JFrame {
 
         int empId = this.currentUser.getEmployeeNumber();
 
-        if (currentUser.canSelectOtherEmployeeLeave()) {
+        if (authzService.canSelectOtherEmployeeLeave(currentUser)) {
             int choice = showAccessModeDialog("Leave Application");
 
             if (choice == JOptionPane.YES_OPTION) {

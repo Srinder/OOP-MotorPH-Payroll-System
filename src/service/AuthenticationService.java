@@ -1,5 +1,5 @@
 //Implementation of Authentication operations.
-//Consolidates all authentication logic including login, 2FA, password reset, and account lockout.
+//Consolidates all authentication logic including login, password reset, and account lockout.
 
 package service;
 

@@ -123,9 +123,7 @@ public java.util.List<model.LeaveRequest> getAllRequests() {
 
                 String reason;
                 String status;
-                // Support both legacy orders:
-                // 1) ...,reason,status
-                // 2) ...,status,reason
+                
                 if (KNOWN_STATUSES.contains(col5.toUpperCase())) {
                     status = col5;
                     reason = col6;

@@ -11,12 +11,15 @@ import javax.swing.table.DefaultTableModel;
 import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.SwingUtilities;
 import javax.swing.JOptionPane;
+import service.AuthorizationService;
 import service.IEmployeeManagementService;
 import service.EmployeeManagementService;
+import service.IAuthorizationService;
 
 public class EmployeeTable extends javax.swing.JFrame {
     public static EmployeeTable instance;
     private final IEmployeeManagementService employeeService;
+    private final IAuthorizationService authzService = new AuthorizationService();
     private AddEmployee addemp;
     private final boolean openedFromPayslip;
     private final boolean openedFromAttendance;
@@ -185,7 +188,7 @@ public class EmployeeTable extends javax.swing.JFrame {
             System.out.println("DEBUG: No user logged in, defaulting to Read-Only.");
             return true;
         }
-        return currentUser.isReadOnlyInEmployeeEditor();
+        return authzService.isReadOnlyInEmployeeEditor(currentUser);
     }
 
     private void openAttendanceSelection(int empNum) {

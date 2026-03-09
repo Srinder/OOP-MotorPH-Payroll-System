@@ -51,6 +51,8 @@ public class LeaveRequest {
     public String getStatus() {
         return status;
     }
+    
+    //setters
 
     public void setEmployeeId(int employeeId) {
         this.employeeId = employeeId;
@@ -78,6 +80,5 @@ public class LeaveRequest {
 }
     
     
-    // Setters
-     
+
     

@@ -10,11 +10,14 @@ import service.IAttendanceService;
 import service.AttendanceService;
 import java.util.ArrayList;
 import java.util.Vector;
+import service.AuthorizationService;
+import service.IAuthorizationService;
 
 public class Attendance extends JFrame {
 
     private String empNo;
     private final IAttendanceService attendanceService;
+    private final IAuthorizationService authzService = new AuthorizationService();
 
     public Attendance(String empNo) {
         this(empNo, false, new AttendanceService());
@@ -90,7 +93,7 @@ public class Attendance extends JFrame {
 
     private boolean isPowerUser() {
         model.Employee current = model.User.getLoggedInUser();
-        return current != null && current.canManageAttendanceRecords();
+        return current != null && authzService.canManageAttendanceRecords(current);
     }
 
     private void loadEmployeeName() {
