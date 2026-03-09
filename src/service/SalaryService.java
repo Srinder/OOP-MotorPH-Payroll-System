@@ -36,6 +36,9 @@ public class SalaryService implements ISalaryService {
     // MASTER METHOD: This is what our GUI will call for the final net pay.
     @Override
     public double calculateSemiMonthlyNet(Employee emp, double hours, double overtimeHours) {
+        if (isProbationaryStatus(emp)) {
+            overtimeHours = 0.0;
+        }
         double semiMonthlyGross = calculateGrossIncome(emp, hours, overtimeHours);
         
         double sssSemi = calculateSSS(semiMonthlyGross);
@@ -117,7 +120,8 @@ public class SalaryService implements ISalaryService {
         // Employee share based on compensation received:
         // 1% for 1,000-1,500 and 2% for above 1,500.
         double rate = (compensationBase > 1500) ? 0.02 : 0.01;
-        return compensationBase * rate;
+        double contribution = compensationBase * rate;
+        return Math.min(contribution, 100.0);
     }
     
     @Override
@@ -133,6 +137,7 @@ public class SalaryService implements ISalaryService {
 
     @Override
     public PayslipData computePayslipData(Employee emp, String empId, LocalDate startDate, LocalDate endDate) {
+        boolean probationaryStatus = isProbationaryStatus(emp);
         long regularMinutes = 0L;
         long overtimeMinutes = 0L;
         long lateMinutes = 0L;
@@ -168,13 +173,13 @@ public class SalaryService implements ISalaryService {
                     regularMinutes += Duration.between(regularStart, regularEnd).toMinutes();
                 }
 
-                if (logIn.isBefore(SHIFT_START)) {
+                if (!probationaryStatus && logIn.isBefore(SHIFT_START)) {
                     LocalTime morningOtEnd = logOut.isBefore(SHIFT_START) ? logOut : SHIFT_START;
                     if (morningOtEnd.isAfter(logIn)) {
                         overtimeMinutes += Duration.between(logIn, morningOtEnd).toMinutes();
                     }
                 }
-                if (logOut.isAfter(SHIFT_END)) {
+                if (!probationaryStatus && logOut.isAfter(SHIFT_END)) {
                     LocalTime eveningOtStart = logIn.isAfter(SHIFT_END) ? logIn : SHIFT_END;
                     if (logOut.isAfter(eveningOtStart)) {
                         overtimeMinutes += Duration.between(eveningOtStart, logOut).toMinutes();
@@ -207,6 +212,9 @@ public class SalaryService implements ISalaryService {
             }
         }
 
+        if (probationaryStatus) {
+            overtimeMinutes = 0L;
+        }
         double overtimeHours = overtimeMinutes / 60.0;
         double semiMonthlyBasicSalary = workingDaysInCutoff * 8 * emp.getHourlyRate();
         double overtimeAdjustment = overtimeHours * emp.getHourlyRate();
@@ -253,6 +261,13 @@ public class SalaryService implements ISalaryService {
                 semiMonthlyBasicSalary,
                 totalDeductions,
                 netPay);
+    }
+
+    private boolean isProbationaryStatus(Employee employee) {
+        if (employee == null || employee.getStatus() == null) {
+            return false;
+        }
+        return "Probationary".equalsIgnoreCase(employee.getStatus().trim());
     }
 
     @Override

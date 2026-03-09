@@ -27,6 +27,7 @@ public class LeaveRequests extends javax.swing.JFrame {
         this.statusOnlyMode = statusOnlyMode;
         initComponents(); 
         util.WindowNavigation.installReturnToMainMenuOnClose(this);
+        jcLeaveTypeValue.addActionListener(e -> applyDateSelectionRules());
         
         
 
@@ -42,7 +43,52 @@ public class LeaveRequests extends javax.swing.JFrame {
         loadTableData();      
         updateSummaryCards(); 
         updateCancelButtonState();
+        applyDateSelectionRules();
         applyEntryModeRestrictions();
+    }
+
+    private boolean isVacationLeaveSelected() {
+        Object selectedType = jcLeaveTypeValue.getSelectedItem();
+        return selectedType != null && "Vacation".equalsIgnoreCase(selectedType.toString().trim());
+    }
+
+    private java.util.Date startOfToday() {
+        java.util.Calendar calendar = java.util.Calendar.getInstance();
+        calendar.set(java.util.Calendar.HOUR_OF_DAY, 0);
+        calendar.set(java.util.Calendar.MINUTE, 0);
+        calendar.set(java.util.Calendar.SECOND, 0);
+        calendar.set(java.util.Calendar.MILLISECOND, 0);
+        return calendar.getTime();
+    }
+
+    private java.time.LocalDate toLocalDate(java.util.Date date) {
+        if (date == null) {
+            return null;
+        }
+        return date.toInstant()
+                .atZone(java.time.ZoneId.systemDefault())
+                .toLocalDate();
+    }
+
+    private void applyDateSelectionRules() {
+        if (isVacationLeaveSelected()) {
+            java.util.Date today = startOfToday();
+            jcStartDateValue.setMinSelectableDate(today);
+            jcEndDateValue.setMinSelectableDate(today);
+
+            java.time.LocalDate todayLocal = java.time.LocalDate.now();
+            java.time.LocalDate startLocal = toLocalDate(jcStartDateValue.getDate());
+            java.time.LocalDate endLocal = toLocalDate(jcEndDateValue.getDate());
+            if (startLocal != null && startLocal.isBefore(todayLocal)) {
+                jcStartDateValue.setDate(null);
+            }
+            if (endLocal != null && endLocal.isBefore(todayLocal)) {
+                jcEndDateValue.setDate(null);
+            }
+        } else {
+            jcStartDateValue.setMinSelectableDate(null);
+            jcEndDateValue.setMinSelectableDate(null);
+        }
     }
 
     private void applyEntryModeRestrictions() {
@@ -752,6 +798,16 @@ public class LeaveRequests extends javax.swing.JFrame {
         if (start == null || end == null || reason.trim().isEmpty()) {
             javax.swing.JOptionPane.showMessageDialog(this, "Please fill in all fields.");
             return;
+        }
+
+        if ("Vacation".equalsIgnoreCase(type)) {
+            java.time.LocalDate today = java.time.LocalDate.now();
+            java.time.LocalDate startDate = toLocalDate(start);
+            java.time.LocalDate endDate = toLocalDate(end);
+            if ((startDate != null && startDate.isBefore(today)) || (endDate != null && endDate.isBefore(today))) {
+                javax.swing.JOptionPane.showMessageDialog(this, "Vacation leave only allows today or future dates.");
+                return;
+            }
         }
 
         String startDateStr = leaveService.normalizeDateForStorage(start);

@@ -53,7 +53,7 @@ public class AttendanceService implements IAttendanceService{
 
         // 3. Use SERVICE rules to compute the values
         double late = calculateLateMinutes(dailyRecord);
-        double overtime = calculateOvertimeMinutes(dailyRecord);
+        double overtime = isProbationaryEmployee(empId) ? 0.0 : calculateOvertimeMinutes(dailyRecord);
         double undertime = calculateUndertimeMinutes(dailyRecord);
 
         return Map.of(
@@ -62,6 +62,12 @@ public class AttendanceService implements IAttendanceService{
             "Undertime", undertime
         );
 }
+
+    private boolean isProbationaryEmployee(int empId) {
+        return employeeRepo.findById(empId)
+                .map(emp -> emp.getStatus() != null && "Probationary".equalsIgnoreCase(emp.getStatus().trim()))
+                .orElse(false);
+    }
 
     //Calculates late minutes for a specific record.
     //Rule: If arrival is after 8:10 AM, late is calculated from 8:00 AM.
