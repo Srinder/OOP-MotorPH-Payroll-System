@@ -5170,3 +5170,6 @@ EmpNo,LastName,FirstName,Date,LogIn,LogOut
 10034,Santos,Beatriz,07/01/2025,17:59,18:00
 10001,Garcia,Manuel III,02/16/2026,8:46,17:46
 10007,San Jose,Brad,03/08/2026,19:05,19:06
+10001,Garcia,Manuel III,03/09/2026,14:06,14:06
+10001,Garcia,Manuel III,03/09/2026,14:10,N/A
+10006,Villanueva,Andrea Mae,03/09/2026,14:13,N/A

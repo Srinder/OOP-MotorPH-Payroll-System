@@ -5,7 +5,10 @@
 10001,Vacation,3/3/2026,3/6/2026,Trip to Cebu,Approved
 10001,Sick,3/6/2026,3/6/2026,SL,Cancelled
 10001,Vacation,3/16/2026,3/16/2026,Family Reunion,Pending
-10001,Vacation,3/26/2026,3/27/2026,Going to province,Pending
+10001,Vacation,3/26/2026,3/27/2026,Going to province,Approved
 10005,Vacation,03/23/2026,03/27/2026,going to brother's wedding,Approved
 10001,Vacation,03/25/2026,03/26/2026,Need to attend my kid's graduation,Approved
 10001,Vacation,04/16/2026,04/17/2026,Celebrate birthday,Approved
+10001,Vacation,03/16/2026,03/18/2026,travel,Rejected
+10001,Sick,03/10/2026,03/11/2026,sick,Approved
+"10006","Vacation","03/17/2026","03/31/2026","LOA","Pending"

@@ -202,22 +202,26 @@
                           <Component id="jLabel1" min="-2" pref="329" max="-2" attributes="0"/>
                       </Group>
                       <Group type="102" attributes="0">
-                          <Group type="103" groupAlignment="0" attributes="0">
-                              <Group type="102" alignment="0" attributes="0">
+                          <Group type="103" groupAlignment="0" max="-2" attributes="0">
+                              <Group type="102" attributes="0">
                                   <EmptySpace min="-2" pref="74" max="-2" attributes="0"/>
-                                  <Group type="103" groupAlignment="0" max="-2" attributes="0">
-                                      <Component id="jButtonReports" alignment="0" pref="250" max="32767" attributes="0"/>
-                                      <Component id="jButtonEmployee" alignment="0" pref="250" max="32767" attributes="0"/>
-                                      <Component id="jButtonUserManagement" alignment="0" max="32767" attributes="0"/>
+                                  <Group type="103" groupAlignment="0" attributes="0">
+                                      <Component id="jButtonEmployee" min="-2" pref="250" max="-2" attributes="0"/>
+                                      <Component id="btnLeaveRequest" min="-2" pref="250" max="-2" attributes="0"/>
                                   </Group>
                                   <EmptySpace min="-2" pref="45" max="-2" attributes="0"/>
                                   <Group type="103" groupAlignment="0" attributes="0">
-                                      <Component id="jButtonAttendance" min="-2" pref="250" max="-2" attributes="0"/>
+                                      <Component id="jButtonAttendance" alignment="0" min="-2" pref="250" max="-2" attributes="0"/>
                                       <Component id="jButtonPayslip" alignment="0" min="-2" pref="250" max="-2" attributes="0"/>
-                                      <Component id="btnLeaveRequest" min="-2" pref="250" max="-2" attributes="0"/>
                                   </Group>
+                                  <EmptySpace max="32767" attributes="0"/>
+                                  <Group type="103" groupAlignment="0" attributes="0">
+                                      <Component id="jButtonReports" min="-2" pref="250" max="-2" attributes="0"/>
+                                      <Component id="jButtonUserManagement" min="-2" pref="250" max="-2" attributes="0"/>
+                                  </Group>
+                                  <EmptySpace min="-2" pref="8" max="-2" attributes="0"/>
                               </Group>
-                              <Group type="102" alignment="0" attributes="0">
+                              <Group type="102" attributes="0">
                                   <EmptySpace min="-2" pref="869" max="-2" attributes="0"/>
                                   <Component id="jButtonExit2" min="-2" pref="85" max="-2" attributes="0"/>
                               </Group>
@@ -236,18 +240,15 @@
                   <Group type="103" groupAlignment="3" attributes="0">
                       <Component id="jButtonAttendance" alignment="3" min="-2" pref="47" max="-2" attributes="0"/>
                       <Component id="jButtonEmployee" alignment="3" min="-2" pref="47" max="-2" attributes="0"/>
+                      <Component id="jButtonReports" alignment="3" min="-2" pref="47" max="-2" attributes="0"/>
                   </Group>
                   <EmptySpace min="-2" pref="38" max="-2" attributes="0"/>
                   <Group type="103" groupAlignment="3" attributes="0">
                       <Component id="jButtonPayslip" alignment="3" min="-2" pref="47" max="-2" attributes="0"/>
                       <Component id="jButtonUserManagement" alignment="3" min="-2" pref="48" max="-2" attributes="0"/>
-                  </Group>
-                  <EmptySpace min="-2" pref="26" max="-2" attributes="0"/>
-                  <Group type="103" groupAlignment="3" attributes="0">
-                      <Component id="jButtonReports" alignment="3" min="-2" pref="47" max="-2" attributes="0"/>
                       <Component id="btnLeaveRequest" alignment="3" min="-2" pref="47" max="-2" attributes="0"/>
                   </Group>
-                  <EmptySpace min="-2" pref="17" max="-2" attributes="0"/>
+                  <EmptySpace min="-2" pref="90" max="-2" attributes="0"/>
                   <Component id="jButtonExit2" min="-2" pref="28" max="-2" attributes="0"/>
                   <EmptySpace pref="33" max="32767" attributes="0"/>
                   <Component id="jLabel1" min="-2" max="-2" attributes="0"/>

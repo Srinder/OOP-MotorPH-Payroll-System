@@ -24,6 +24,11 @@ public class Attendance extends JFrame {
         this(empNo, skipInitialSearchPrompt, new AttendanceService());
     }
     
+    @SuppressWarnings("unchecked")
+    private void loadAttendanceData() {
+    
+}
+    
     public Attendance(String empNo, boolean skipInitialSearchPrompt, IAttendanceService attendanceService) {
         this.empNo = empNo;
         this.attendanceService = attendanceService;
