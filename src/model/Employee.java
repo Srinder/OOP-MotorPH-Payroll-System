@@ -87,59 +87,6 @@ public abstract class Employee implements ICalculatable {
     public String getFullName(){
         return firstName + " " + lastName;
     }
-
-    /**
- *
- *
-    public boolean canManageSystem() {
-        return "IT".equalsIgnoreCase(getRole());
-    }
-
-    public boolean canViewReports() {
-        String role = getRole();
-        return "ADMIN".equalsIgnoreCase(role) || "FINANCE".equalsIgnoreCase(role);
-    }
-
-    public boolean shouldUseMyProfileLabel() {
-        String role = getRole();
-        return "IT".equalsIgnoreCase(role)
-                || "REGULAR".equalsIgnoreCase(role)
-                || "PROBATIONARY".equalsIgnoreCase(role);
-    }
-
-    public boolean canViewMasterEmployeeInfo() {
-        String role = getRole();
-        return "ADMIN".equalsIgnoreCase(role)
-                || "HR".equalsIgnoreCase(role)
-                || "FINANCE".equalsIgnoreCase(role);
-    }
-
-    public boolean canViewOtherEmployeePayslip() {
-        return canViewMasterEmployeeInfo();
-    }
-
-    public boolean canSelectOtherEmployeeAttendance() {
-        String role = getRole();
-        return "ADMIN".equalsIgnoreCase(role) || "FINANCE".equalsIgnoreCase(role);
-    }
-
-    public boolean canManageAttendanceRecords() {
-        String role = getRole();
-        return "ADMIN".equalsIgnoreCase(role)
-                || "HR".equalsIgnoreCase(role)
-                || "FINANCE".equalsIgnoreCase(role);
-    }
-
-    public boolean canSelectOtherEmployeeLeave() {
-        String role = getRole();
-        return "ADMIN".equalsIgnoreCase(role) || "HR".equalsIgnoreCase(role);
-    }
-
-    public boolean isReadOnlyInEmployeeEditor() {
-        String role = getRole();
-        return "FINANCE".equalsIgnoreCase(role) || "ADMIN".equalsIgnoreCase(role);
-    }
-    */
     
     //Calculate Total Allowances
     public double getTotalAllowances(){
