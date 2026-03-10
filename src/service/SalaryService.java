@@ -41,7 +41,7 @@ public class SalaryService implements ISalaryService {
         }
         double semiMonthlyGross = calculateGrossIncome(emp, hours, overtimeHours);
         
-        double sssSemi = calculateSSS(semiMonthlyGross);
+        double sssSemi = calculateSSS (semiMonthlyGross);
         double philHealthSemi = calculatePhilHealth(semiMonthlyGross);
         double pagIbigSemi = calculatePagIbig(semiMonthlyGross);
         
@@ -92,7 +92,7 @@ public class SalaryService implements ISalaryService {
                 }
             }
         }
-        return sssPremium;
+        return sssPremium /2;
     }
 
     

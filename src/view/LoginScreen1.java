@@ -204,7 +204,7 @@ public class LoginScreen1 extends javax.swing.JFrame {
         // Reset failed login attempts in service
         authService.clearFailedLoginAttempts(username);
         model.User.setLoggedInUser(emp);
-        showWelcomePopup(emp);
+        
 
         // POLYMORPHISM: Pass the Employee object to the MainMenu
         // This allows MainMenu to handle permissions based on the object type
@@ -215,19 +215,6 @@ public class LoginScreen1 extends javax.swing.JFrame {
         this.dispose(); // Close the current login screen
     }
 
-    private void showWelcomePopup(Employee emp) {
-        String firstName = (emp == null || emp.getFirstName() == null)
-                ? ""
-                : emp.getFirstName().trim();
-        if (firstName.isEmpty()) {
-            firstName = "User";
-        }
-        JOptionPane.showMessageDialog(
-                this,
-                "Welcome " + firstName,
-                "Welcome",
-                JOptionPane.INFORMATION_MESSAGE);
-    }
 
     private String getEnteredUsername() {
         return jTextFieldUsername.getText().trim();

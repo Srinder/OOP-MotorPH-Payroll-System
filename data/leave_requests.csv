@@ -11,4 +11,7 @@
 10001,Vacation,04/16/2026,04/17/2026,Celebrate birthday,Approved
 10001,Vacation,03/16/2026,03/18/2026,travel,Rejected
 10001,Sick,03/10/2026,03/11/2026,sick,Approved
-"10006","Vacation","03/17/2026","03/31/2026","LOA","Pending"
+10006,Vacation,03/17/2026,03/31/2026,LOA,Pending
+10022,Vacation,03/10/2026,03/17/2026,vacation,Pending
+10022,Vacation,03/24/2026,03/31/2026,vacation2,Cancelled
+10022,Sick,03/24/2026,03/31/2026,sick,Pending

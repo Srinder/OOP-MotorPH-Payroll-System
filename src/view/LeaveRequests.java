@@ -28,6 +28,8 @@ public class LeaveRequests extends javax.swing.JFrame {
         initComponents(); 
         util.WindowNavigation.installReturnToMainMenuOnClose(this);
         jcLeaveTypeValue.addActionListener(e -> applyDateSelectionRules());
+        jcStartDateValue.addPropertyChangeListener("date", e -> applyDateSelectionRules());
+        jcEndDateValue.addPropertyChangeListener("date", e -> applyDateSelectionRules());
         
         
 
@@ -71,25 +73,28 @@ public class LeaveRequests extends javax.swing.JFrame {
     }
 
     private void applyDateSelectionRules() {
+        java.util.Date today = startOfToday();
+        java.util.Date selectedStart = jcStartDateValue.getDate();
+        
         if (isVacationLeaveSelected()) {
-            java.util.Date today = startOfToday();
-            jcStartDateValue.setMinSelectableDate(today);
-            jcEndDateValue.setMinSelectableDate(today);
+            jcStartDateValue.getJCalendar().setMinSelectableDate(today);
+        
+        // 2. The End Date must be at least 'today' OR the 'start date'
+        java.util.Date minEnd = (selectedStart != null && selectedStart.after(today)) 
+                                ? selectedStart : today;
+        jcEndDateValue.getJCalendar().setMinSelectableDate(minEnd);
 
-            java.time.LocalDate todayLocal = java.time.LocalDate.now();
-            java.time.LocalDate startLocal = toLocalDate(jcStartDateValue.getDate());
-            java.time.LocalDate endLocal = toLocalDate(jcEndDateValue.getDate());
-            if (startLocal != null && startLocal.isBefore(todayLocal)) {
-                jcStartDateValue.setDate(null);
-            }
-            if (endLocal != null && endLocal.isBefore(todayLocal)) {
-                jcEndDateValue.setDate(null);
-            }
-        } else {
-            jcStartDateValue.setMinSelectableDate(null);
-            jcEndDateValue.setMinSelectableDate(null);
+        // 3. Clear existing invalid selections
+        if (selectedStart != null && toLocalDate(selectedStart).isBefore(java.time.LocalDate.now())) {
+            jcStartDateValue.setDate(null);
         }
+    } else {
+        // Reset restrictions for other leave types (e.g., Sick Leave can be retrospective)
+        jcStartDateValue.getJCalendar().setMinSelectableDate(null);
+        jcEndDateValue.getJCalendar().setMinSelectableDate(selectedStart);
     }
+}
+            
 
     private void applyEntryModeRestrictions() {
         if (statusOnlyMode) {

@@ -31,7 +31,7 @@ public class ProbationaryEmployee extends Employee{
     // Implementing the "Contract" from ICalculatable
 @Override
     public double calculateGrossIncome(double hoursWorked, double overtimeHours) {
-        return (getHourlyRate() * hoursWorked) + (getHourlyRate() * overtimeHours * 1.25);
+        return (getHourlyRate() * hoursWorked);
     }
     
 @Override

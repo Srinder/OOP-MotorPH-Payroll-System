@@ -38,6 +38,23 @@ public class Attendance extends JFrame {
         initComponents();
         util.WindowNavigation.installReturnToMainMenuOnClose(this);
 
+   
+        startDateLabel.addPropertyChangeListener("date", evt -> {
+            java.util.Date startDate = startDateLabel.getDate();
+        if (startDate != null) {
+        // 1. Lock the "To" date so it can't be before the "From" date
+        endDateLabel.getJCalendar().setMinSelectableDate(startDate);
+        
+        // 2. If 'To' is now invalid because 'From' moved forward, clear it
+        if (endDateLabel.getDate() != null && endDateLabel.getDate().before(startDate)) {
+            endDateLabel.setDate(null);
+        }
+    }
+});
+        java.util.Date today = new java.util.Date();
+        startDateLabel.getJCalendar().setMaxSelectableDate(today);
+        endDateLabel.getJCalendar().setMaxSelectableDate(today);
+        
         // Identify the user and their role
         model.Employee current = model.User.getLoggedInUser();
         boolean powerUser = isPowerUser();
