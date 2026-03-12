@@ -213,6 +213,36 @@ public class AttendanceService implements IAttendanceService{
     }
 
     @Override
+    public boolean hasTimeInToday(Employee employee) {
+        if (employee == null) {
+            return false;
+        }
+        String empId = String.valueOf(employee.getEmployeeNumber());
+        String today = LocalDate.now().format(dateFmt);
+        for (AttendanceRecord record : attendanceRepo.findByEmployeeId(empId)) {
+            if (today.equals(record.getDate()) && !isMissingTime(record.getLogIn())) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    @Override
+    public boolean hasTimeOutToday(Employee employee) {
+        if (employee == null) {
+            return false;
+        }
+        String empId = String.valueOf(employee.getEmployeeNumber());
+        String today = LocalDate.now().format(dateFmt);
+        for (AttendanceRecord record : attendanceRepo.findByEmployeeId(empId)) {
+            if (today.equals(record.getDate()) && !isMissingTime(record.getLogOut())) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    @Override
     public List<Employee> getSupervisedEmployees(Employee supervisor) {
         List<Employee> supervised = new ArrayList<>();
         if (supervisor == null) {

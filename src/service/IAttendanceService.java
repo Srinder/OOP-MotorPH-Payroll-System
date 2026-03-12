@@ -23,6 +23,8 @@ public interface IAttendanceService {
     double calculateMonthlyNetHours(String empId, String targetMonthYear);
     void recordTimeIn(Employee employee);
     void recordTimeOut(Employee employee);
+    boolean hasTimeInToday(Employee employee);
+    boolean hasTimeOutToday(Employee employee);
     List<Employee> getSupervisedEmployees(Employee supervisor);
     String getEmployeeDisplayName(String empNo);
     List<Employee> searchEmployees(String query);

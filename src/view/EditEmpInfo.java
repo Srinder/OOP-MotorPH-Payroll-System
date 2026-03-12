@@ -26,8 +26,9 @@ public class EditEmpInfo extends javax.swing.JFrame {
     initComponents();
     configureHrInputMasks();
     util.WindowNavigation.installReturnToMainMenuOnClose(this);
-    configureCloseTarget();
-    loadEmployeeData(employeeNumber); // Your method to fill text fields
+        configureCloseTarget();
+        loadEmployeeData(employeeNumber); // Your method to fill text fields
+        setFieldsEditable(false);
 
     boolean isHR = isHrUser();
     boolean shouldBeReadOnly = isReadOnly || !isHR;
@@ -91,6 +92,8 @@ private void loadEmployeeData(int empNum) {
         Name.setText(employeeData.getLastName() + ", " + employeeData.getFirstName());
         Position.setText(employeeData.getPosition());
         Status.setText(employeeData.getStatus());
+        StatusInfo.setText(employeeData.getStatus());
+        setStatusDropdownValue(employeeData.getStatus());
         PhoneNum.setText(employeeData.getPhoneNumber());
         Birthday.setText(employeeData.getBirthday());
         Address.setText(employeeData.getAddress());
@@ -122,7 +125,7 @@ private boolean saveEmployeeChanges() {
             txtLname.getText().trim(),
             PositionInfo.getText().trim(),
             PhoneNum.getText().trim(),
-            Status.getText().trim(),
+            getSelectedStatus(),
             ImmSup.getText().trim(),
             Address.getText().trim(),
             Birthday.getText().trim(),
@@ -151,6 +154,30 @@ private void finalizeSuccessfulSave() {
     dispose();
 }
 
+private String getSelectedStatus() {
+    Object selected = cmbStatus.getSelectedItem();
+    if (selected == null) {
+        return StatusInfo.getText().trim();
+    }
+    return selected.toString().trim();
+}
+
+private void setStatusDropdownValue(String status) {
+    if (status == null) {
+        cmbStatus.setSelectedIndex(-1);
+        return;
+    }
+    String normalized = status.trim();
+    StatusInfo.setText(normalized);
+    for (int i = 0; i < cmbStatus.getItemCount(); i++) {
+        String item = cmbStatus.getItemAt(i);
+        if (item != null && item.equalsIgnoreCase(normalized)) {
+            cmbStatus.setSelectedIndex(i);
+            return;
+        }
+    }
+    cmbStatus.setSelectedIndex(-1);
+}
 
 
 
@@ -166,7 +193,7 @@ private void finalizeSuccessfulSave() {
         Position.setEditable(false);
         PositionInfo.setEditable(editable);
         PhoneNum.setEditable(editable);
-        Status.setEditable(editable);
+        Status.setEditable(false);
         ImmSup.setEditable(editable);
         Address.setEditable(editable);
         Birthday.setEditable(editable);
@@ -183,7 +210,7 @@ private void finalizeSuccessfulSave() {
 
         PositionInfo.setFocusable(editable);
         PhoneNum.setFocusable(editable);
-        Status.setFocusable(editable);
+        Status.setFocusable(false);
         ImmSup.setFocusable(editable);
         Address.setFocusable(editable);
         Birthday.setFocusable(editable);
@@ -196,6 +223,11 @@ private void finalizeSuccessfulSave() {
         PhoneAll.setFocusable(editable);
         ClothAll.setFocusable(editable);
         Hourly.setFocusable(editable);
+
+        cmbStatus.setEnabled(editable);
+        cmbStatus.setFocusable(editable);
+        cmbStatus.setVisible(editable);
+        StatusInfo.setVisible(!editable);
 
         Save.setEnabled(editable);
         Edit.setEnabled(!editable);
@@ -234,6 +266,8 @@ private void finalizeSuccessfulSave() {
         jLabel20 = new javax.swing.JLabel();
         jLabel21 = new javax.swing.JLabel();
         jLabel22 = new javax.swing.JLabel();
+        cmbStatus = new javax.swing.JComboBox<>();
+        StatusInfo = new javax.swing.JTextField();
         Save = new javax.swing.JButton();
         jButton2 = new javax.swing.JButton();
         Edit = new javax.swing.JButton();
@@ -363,7 +397,9 @@ private void finalizeSuccessfulSave() {
 
         TINname.setText("TIN:");
         jPanel3.add(TINname, new org.netbeans.lib.awtextra.AbsoluteConstraints(23, 174, 99, -1));
-        jPanel3.add(jLabel10, new org.netbeans.lib.awtextra.AbsoluteConstraints(305, 171, 123, -1));
+
+        jLabel10.setText("Status:");
+        jPanel3.add(jLabel10, new org.netbeans.lib.awtextra.AbsoluteConstraints(23, 204, 123, -1));
 
         jLabel11.setText("Basic Salary:");
         jPanel3.add(jLabel11, new org.netbeans.lib.awtextra.AbsoluteConstraints(317, 81, 123, 24));
@@ -394,6 +430,23 @@ private void finalizeSuccessfulSave() {
 
         jLabel21.setText("Clothing Allowance:");
         jPanel3.add(jLabel21, new org.netbeans.lib.awtextra.AbsoluteConstraints(317, 174, 144, -1));
+
+        cmbStatus.setModel(new javax.swing.DefaultComboBoxModel<>(new String[] { "Probationary", "Regular", "Termed" }));
+        cmbStatus.setEnabled(false);
+        cmbStatus.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                cmbStatusActionPerformed(evt);
+            }
+        });
+        jPanel3.add(cmbStatus, new org.netbeans.lib.awtextra.AbsoluteConstraints(176, 201, 123, -1));
+
+        StatusInfo.setEditable(false);
+        StatusInfo.setText("Regular");
+        jPanel3.add(StatusInfo, new org.netbeans.lib.awtextra.AbsoluteConstraints(176, 201, 123, -1));
+
+        StatusInfo.setEditable(false);
+        StatusInfo.setText("Regular");
+        jPanel3.add(StatusInfo, new org.netbeans.lib.awtextra.AbsoluteConstraints(176, 201, 123, -1));
 
         Save.setBackground(new java.awt.Color(14, 49, 113));
         Save.setForeground(new java.awt.Color(255, 255, 255));
@@ -515,6 +568,14 @@ private void finalizeSuccessfulSave() {
  
     }//GEN-LAST:event_EditActionPerformed
 
+    private void cmbStatusActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_cmbStatusActionPerformed
+        Object selected = cmbStatus.getSelectedItem();
+        if (selected != null) {
+            Status.setText(selected.toString());
+            StatusInfo.setText(selected.toString());
+        }
+    }//GEN-LAST:event_cmbStatusActionPerformed
+
     private void SaveActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_SaveActionPerformed
     if (employeeData == null) {
         JOptionPane.showMessageDialog(this, "Error: No employee data loaded!", "Error", JOptionPane.ERROR_MESSAGE);
@@ -579,6 +640,7 @@ private void finalizeSuccessfulSave() {
     private javax.swing.JTextField Address;
     private javax.swing.JTextField Birthday;
     private javax.swing.JFormattedTextField ClothAll;
+    private javax.swing.JComboBox<String> cmbStatus;
     private javax.swing.JButton Edit;
     private javax.swing.JFormattedTextField Hourly;
     private javax.swing.JTextField ImmSup;
@@ -597,6 +659,7 @@ private void finalizeSuccessfulSave() {
     private javax.swing.JFormattedTextField Salary;
     private javax.swing.JButton Save;
     private javax.swing.JTextField Status;
+    private javax.swing.JTextField StatusInfo;
     private javax.swing.JTextField TIN;
     private javax.swing.JLabel TINname;
     private javax.swing.JLabel headerLogo;

@@ -23,6 +23,11 @@ public class AddEmployee extends javax.swing.JFrame {
         jTxtEmpNum.setEditable(false);
         jTxtEmpNum.setFocusable(false);
         jTxtEmpNum.setBackground(java.awt.Color.LIGHT_GRAY);
+
+        jTxtStatus.setText("Probationary");
+        jTxtStatus.setEditable(false);
+        jTxtStatus.setFocusable(false);
+        jTxtStatus.setBackground(java.awt.Color.LIGHT_GRAY);
     }
 
     private void generateNextEmpNum() {

@@ -20,6 +20,7 @@ public class MainMenu extends javax.swing.JFrame {
 
     // OOP: Using the Parent class Employee for Polymorphism
     private Employee currentUser;
+    private static boolean showWelcomeSubtitle = true;
     
     
     
@@ -58,13 +59,44 @@ public class MainMenu extends javax.swing.JFrame {
         initComponents();
         updateWelcomeMessage();
         applyRolePermissions();
-        lblCurrentUser.setText("Welcome, " + currentUser.getFirstName() + " " + currentUser.getLastName());
+        updateWelcomeSubtitle();
+        updateTimeButtons();
     }
 
     private void updateWelcomeMessage() {
         if (jLabelWelcome != null) {
             jLabelWelcome.setText("Motor PH Payroll System");
         }
+    }
+
+    private void updateWelcomeSubtitle() {
+        if (lblCurrentUser == null) {
+            return;
+        }
+        if (!showWelcomeSubtitle || currentUser == null) {
+            lblCurrentUser.setText("");
+            lblCurrentUser.setVisible(false);
+            return;
+        }
+        lblCurrentUser.setVisible(true);
+        lblCurrentUser.setText("Welcome, " + currentUser.getFirstName() + " " + currentUser.getLastName());
+    }
+
+    private void markWelcomeConsumed() {
+        showWelcomeSubtitle = false;
+        updateWelcomeSubtitle();
+    }
+
+    private void updateTimeButtons() {
+        if (currentUser == null) {
+            jButtonTimein.setEnabled(false);
+            jButtonTimeOut.setEnabled(false);
+            return;
+        }
+        boolean hasTimeIn = attendanceService.hasTimeInToday(currentUser);
+        boolean hasTimeOut = attendanceService.hasTimeOutToday(currentUser);
+        jButtonTimein.setEnabled(!hasTimeIn);
+        jButtonTimeOut.setEnabled(hasTimeIn && !hasTimeOut);
     }
     
     private void applyRolePermissions() {
@@ -163,6 +195,9 @@ public class MainMenu extends javax.swing.JFrame {
         jLabelWelcome.setForeground(new java.awt.Color(255, 255, 255));
         jLabelWelcome.setBorder(javax.swing.BorderFactory.createCompoundBorder());
 
+        lblCurrentUser.setFont(new java.awt.Font("Kinetika Bold", 1, 24)); // NOI18N
+        lblCurrentUser.setForeground(new java.awt.Color(255, 255, 255));
+
         jButtonTimein.setBackground(new java.awt.Color(0, 51, 204));
         jButtonTimein.setFont(new java.awt.Font("Segoe UI", 1, 12)); // NOI18N
         jButtonTimein.setForeground(new java.awt.Color(255, 255, 255));
@@ -197,7 +232,9 @@ public class MainMenu extends javax.swing.JFrame {
                 .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
             .addGroup(jPanel1Layout.createSequentialGroup()
                 .addGap(39, 39, 39)
-                .addComponent(jLabelWelcome, javax.swing.GroupLayout.PREFERRED_SIZE, 596, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addComponent(jLabelWelcome, javax.swing.GroupLayout.PREFERRED_SIZE, 596, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(lblCurrentUser, javax.swing.GroupLayout.PREFERRED_SIZE, 596, javax.swing.GroupLayout.PREFERRED_SIZE))
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                 .addComponent(jButtonTimein, javax.swing.GroupLayout.PREFERRED_SIZE, 89, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addGap(18, 18, 18)
@@ -218,6 +255,8 @@ public class MainMenu extends javax.swing.JFrame {
             .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, jPanel1Layout.createSequentialGroup()
                 .addGap(0, 0, Short.MAX_VALUE)
                 .addComponent(jLabelWelcome, javax.swing.GroupLayout.PREFERRED_SIZE, 59, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addComponent(lblCurrentUser, javax.swing.GroupLayout.PREFERRED_SIZE, 36, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addGap(30, 30, 30))
         );
 
@@ -304,8 +343,6 @@ public class MainMenu extends javax.swing.JFrame {
             }
         });
 
-        lblCurrentUser.setText("Name: ");
-
         javax.swing.GroupLayout jPanel2Layout = new javax.swing.GroupLayout(jPanel2);
         jPanel2.setLayout(jPanel2Layout);
         jPanel2Layout.setHorizontalGroup(
@@ -333,9 +370,7 @@ public class MainMenu extends javax.swing.JFrame {
                                             .addComponent(jButtonReports, javax.swing.GroupLayout.PREFERRED_SIZE, 250, javax.swing.GroupLayout.PREFERRED_SIZE)
                                             .addComponent(jButtonUserManagement, javax.swing.GroupLayout.PREFERRED_SIZE, 250, javax.swing.GroupLayout.PREFERRED_SIZE))
                                         .addGap(8, 8, 8))
-                                    .addGroup(jPanel2Layout.createSequentialGroup()
-                                        .addComponent(lblCurrentUser, javax.swing.GroupLayout.PREFERRED_SIZE, 332, javax.swing.GroupLayout.PREFERRED_SIZE)
-                                        .addGap(0, 0, Short.MAX_VALUE))))
+                                    ))
                             .addGroup(jPanel2Layout.createSequentialGroup()
                                 .addGap(869, 869, 869)
                                 .addComponent(jButtonExit2, javax.swing.GroupLayout.PREFERRED_SIZE, 85, javax.swing.GroupLayout.PREFERRED_SIZE)))
@@ -345,9 +380,7 @@ public class MainMenu extends javax.swing.JFrame {
         jPanel2Layout.setVerticalGroup(
             jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(jPanel2Layout.createSequentialGroup()
-                .addContainerGap()
-                .addComponent(lblCurrentUser)
-                .addGap(131, 131, 131)
+                .addGap(147, 147, 147)
                 .addGroup(jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
                     .addComponent(jButtonAttendance, javax.swing.GroupLayout.PREFERRED_SIZE, 47, javax.swing.GroupLayout.PREFERRED_SIZE)
                     .addComponent(jButtonEmployee, javax.swing.GroupLayout.PREFERRED_SIZE, 47, javax.swing.GroupLayout.PREFERRED_SIZE)
@@ -391,40 +424,52 @@ public class MainMenu extends javax.swing.JFrame {
     }// </editor-fold>//GEN-END:initComponents
 
     private void jButtonTimeinActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButtonTimeinActionPerformed
+        markWelcomeConsumed();
+        if (attendanceService.hasTimeInToday(currentUser)) {
+            JOptionPane.showMessageDialog(this, "Already logged in.");
+            updateTimeButtons();
+            return;
+        }
         attendanceService.recordTimeIn(currentUser);
-        JOptionPane.showMessageDialog(this, "Time In Recorded for " + currentUser.getFirstName() + " " + currentUser.getLastName());
+        String timeInNow = java.time.LocalTime.now().format(java.time.format.DateTimeFormatter.ofPattern("HH:mm"));
+        JOptionPane.showMessageDialog(this, currentUser.getFirstName() + " " + currentUser.getLastName() + " logged in " + timeInNow);
+        updateTimeButtons();
 
     }//GEN-LAST:event_jButtonTimeinActionPerformed
 
     private void jButtonEmployeeActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButtonEmployeeActionPerformed
-    if (authzService.canViewMasterEmployeeInfo(currentUser)) {
-        int choice = showAccessModeDialog("Employee Information");
-        if (choice == JOptionPane.YES_OPTION) {
+        markWelcomeConsumed();
+        if (authzService.canViewMasterEmployeeInfo(currentUser)) {
+            int choice = showAccessModeDialog("Employee Information");
+            if (choice == JOptionPane.YES_OPTION) {
+                openSelfEmployeeProfile();
+            } else if (choice == JOptionPane.NO_OPTION) {
+                openEmployeeTable(false);
+            }
+        } else {
             openSelfEmployeeProfile();
-        } else if (choice == JOptionPane.NO_OPTION) {
-            openEmployeeTable(false);
         }
-    } else {
-        openSelfEmployeeProfile();
-    }
     }//GEN-LAST:event_jButtonEmployeeActionPerformed
 
      
     private void jButtonExit2ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButtonExit2ActionPerformed
-     int confirm = JOptionPane.showConfirmDialog(this,
-        "Are you sure you want to log out?",
-        "Logout Confirmation",
-        JOptionPane.YES_NO_OPTION,
-        JOptionPane.QUESTION_MESSAGE);
+        markWelcomeConsumed();
+        int confirm = JOptionPane.showConfirmDialog(this,
+            "Are you sure you want to log out?",
+            "Logout Confirmation",
+            JOptionPane.YES_NO_OPTION,
+            JOptionPane.QUESTION_MESSAGE);
 
-    if (confirm == JOptionPane.YES_OPTION) {
-        dispose(); // Close MainMenu
-        new LoginScreen1().setVisible(true); // Open LoginScreen1
-}
+        if (confirm == JOptionPane.YES_OPTION) {
+            showWelcomeSubtitle = true;
+            dispose(); // Close MainMenu
+            new LoginScreen1().setVisible(true); // Open LoginScreen1
+        }
     }//GEN-LAST:event_jButtonExit2ActionPerformed
         
 
     private void jButtonAttendanceActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButtonAttendanceActionPerformed
+        markWelcomeConsumed();
         if (currentUser == null) {
             return;
         }
@@ -450,6 +495,7 @@ public class MainMenu extends javax.swing.JFrame {
     }//GEN-LAST:event_jButtonAttendanceActionPerformed
 
     private void jButtonPayslipActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButtonPayslipActionPerformed
+        markWelcomeConsumed();
         String currentEmpId = String.valueOf(currentUser.getEmployeeNumber());
         boolean canSelectOtherEmployeeForPayslip = authzService.canViewOtherEmployeePayslip(currentUser);
         
@@ -467,19 +513,35 @@ public class MainMenu extends javax.swing.JFrame {
     }//GEN-LAST:event_jButtonPayslipActionPerformed
 
     private void jButtonReportsActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButtonReportsActionPerformed
+        markWelcomeConsumed();
         openExternalLink("https://source-flame-64500831.figma.site", "reports");
     }//GEN-LAST:event_jButtonReportsActionPerformed
 
     private void jButtonUserManagementActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButtonUserManagementActionPerformed
+        markWelcomeConsumed();
         openExternalLink("https://narrow-drums-28341315.figma.site", "Manage System");
     }//GEN-LAST:event_jButtonUserManagementActionPerformed
 
     private void jButtonTimeOutActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButtonTimeOutActionPerformed
+        markWelcomeConsumed();
+        if (!attendanceService.hasTimeInToday(currentUser)) {
+            JOptionPane.showMessageDialog(this, "Please time in first.");
+            updateTimeButtons();
+            return;
+        }
+        if (attendanceService.hasTimeOutToday(currentUser)) {
+            JOptionPane.showMessageDialog(this, "Time out already recorded.");
+            updateTimeButtons();
+            return;
+        }
         attendanceService.recordTimeOut(currentUser);
-        javax.swing.JOptionPane.showMessageDialog(this, "Time Out Recorded!");
+        String timeOutNow = java.time.LocalTime.now().format(java.time.format.DateTimeFormatter.ofPattern("HH:mm"));
+        javax.swing.JOptionPane.showMessageDialog(this, currentUser.getFirstName() + " " + currentUser.getLastName() + " logged out " + timeOutNow);
+        updateTimeButtons();
     }//GEN-LAST:event_jButtonTimeOutActionPerformed
 
     private void btnLeaveRequestActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnLeaveRequestActionPerformed
+        markWelcomeConsumed();
         if (currentUser == null) {
             return;
         }
