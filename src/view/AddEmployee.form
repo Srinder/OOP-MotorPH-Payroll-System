@@ -242,7 +242,7 @@
         </Component>
         <Component class="javax.swing.JLabel" name="jLblPHILHEALTH">
           <Properties>
-            <Property name="text" type="java.lang.String" value="PHILEALTH"/>
+            <Property name="text" type="java.lang.String" value="PHILHEALTH"/>
           </Properties>
           <Constraints>
             <Constraint layoutClass="org.netbeans.modules.form.compat2.layouts.DesignAbsoluteLayout" value="org.netbeans.modules.form.compat2.layouts.DesignAbsoluteLayout$AbsoluteConstraintsDescription">

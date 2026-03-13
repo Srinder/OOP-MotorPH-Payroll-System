@@ -176,6 +176,11 @@ public class AddEmployee extends javax.swing.JFrame {
         jLblPosition.setText("Position:");
         jPanel1.add(jLblPosition, new org.netbeans.lib.awtextra.AbsoluteConstraints(35, 260, 132, -1));
 
+        jTxtEmpNum.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                jTxtEmpNumActionPerformed(evt);
+            }
+        });
         jPanel1.add(jTxtEmpNum, new org.netbeans.lib.awtextra.AbsoluteConstraints(167, 104, 211, -1));
         jPanel1.add(jTxtLastName, new org.netbeans.lib.awtextra.AbsoluteConstraints(167, 134, 211, -1));
         jPanel1.add(jTxtFirstName, new org.netbeans.lib.awtextra.AbsoluteConstraints(167, 164, 211, -1));
@@ -189,12 +194,17 @@ public class AddEmployee extends javax.swing.JFrame {
         jLblPAGIBIG.setText("PAGIBIG");
         jPanel1.add(jLblPAGIBIG, new org.netbeans.lib.awtextra.AbsoluteConstraints(35, 326, 132, -1));
 
-        jLblPHILHEALTH.setText("PHILEALTH");
+        jLblPHILHEALTH.setText("PHILHEALTH");
         jPanel1.add(jLblPHILHEALTH, new org.netbeans.lib.awtextra.AbsoluteConstraints(35, 353, 132, -1));
 
         jLblTIN.setText("TIN");
         jPanel1.add(jLblTIN, new org.netbeans.lib.awtextra.AbsoluteConstraints(35, 386, 132, -1));
 
+        jTextSSS.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                jTextSSSActionPerformed(evt);
+            }
+        });
         jPanel1.add(jTextSSS, new org.netbeans.lib.awtextra.AbsoluteConstraints(167, 293, 211, -1));
 
         jLblPersonal.setFont(new java.awt.Font("Segoe UI", 1, 12)); // NOI18N
@@ -363,6 +373,14 @@ public class AddEmployee extends javax.swing.JFrame {
     private void jButtonCancelActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButtonCancelActionPerformed
     dispose(); 
     }//GEN-LAST:event_jButtonCancelActionPerformed
+
+    private void jTxtEmpNumActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jTxtEmpNumActionPerformed
+        // No-op: employee number is auto-generated and non-editable.
+    }//GEN-LAST:event_jTxtEmpNumActionPerformed
+
+    private void jTextSSSActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jTextSSSActionPerformed
+        // No-op: optional action handler for SSS input.
+    }//GEN-LAST:event_jTextSSSActionPerformed
 
     /**
      * @param args the command line arguments
